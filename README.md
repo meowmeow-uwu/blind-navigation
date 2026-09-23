@@ -24,42 +24,39 @@ Dưới đây là luồng hoạt động của hệ thống, bao gồm luồng x
 sequenceDiagram
     autonumber
     actor User as Người dùng
-    participant Sensor as Camera & ToF
+    participant Sensor as "Camera & ToF"
     participant RPi as Raspberry Pi 4 (Core)
     participant VLM as Cloud VLM API
     participant Audio as Loa Mini
     participant Web as Web Dashboard
 
-    rect rgb(200, 220, 240)
-    Note right of User: Luồng 1: Xử lý thời gian thực (Liên tục)
+    Note over User, Web: Luồng 1: Xử lý thời gian thực (Liên tục)
     Sensor->>RPi: Gửi Video Frame & Khoảng cách thô
     RPi->>RPi: Chạy YOLO & Dung hợp dữ liệu ToF
     RPi->>RPi: Đánh giá vật cản (3 làn: Trái-Giữa-Phải)
     
-    alt Khoảng cách < 1m (Nguy hiểm)
+    alt Khoảng cách dưới 1m (Nguy hiểm)
         RPi->>Audio: Ngắt mọi âm thanh hiện tại!
         RPi->>Audio: Phát lệnh: "Dừng lại, có vật cản!"
     else Khoảng cách 1-2m (Cảnh báo)
         RPi->>Audio: Phát lệnh: "Cột bên phải, 1m5" (Ưu tiên trung bình)
-    else Khoảng cách > 2m (An toàn)
+    else Khoảng cách trên 2m (An toàn)
         RPi->>RPi: Không phát cảnh báo
     end
     RPi->>Web: Đẩy dữ liệu Telemetry (Pin, CPU) qua MQTT
-    end
 
-    rect rgb(220, 240, 200)
-    Note right of User: Luồng 2: Trợ lý thị giác (Theo yêu cầu)
+    Note over User, Web: Luồng 2: Trợ lý thị giác (Theo yêu cầu)
     User->>RPi: Bấm nút SOS/VLM Trigger
     RPi->>Sensor: Trích xuất 1 khung hình tĩnh
     RPi->>VLM: Gửi HTTP Request (Image + Prompt)
     VLM-->>RPi: Trả về Text mô tả không gian (2-4s)
     
-    alt Đang có cảnh báo Luồng 1 (< 2m)
+    alt Đang có cảnh báo Luồng 1 (Dưới 2m)
         RPi->>RPi: Hủy hoặc tạm dừng phát Text của VLM
-    else Đang an toàn (> 2m)
+    else Đang an toàn (Trên 2m)
         RPi->>Audio: Text-to-Speech mô tả không gian (Ưu tiên thấp)
     end
-    end
+
 ```
 
 ## 📂 Cấu trúc thư mục (Modular Architecture)
