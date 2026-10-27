@@ -1,0 +1,102 @@
+# 2_edge_device/configs/config.yaml
+# Cấu hình hệ thống hợp nhất cảm biến Siêu âm HC-SR04 + Camera YOLO
+# Đề tài PBL6: Hệ thống hỗ trợ người khiếm thị
+
+system:
+  device_name: "blind-nav-pi4"
+  log_level: "INFO"
+  debug_view: true                   # Hiển thị HUD khi chạy trên PC/màn hình ngoài
+
+camera:
+  device_id: 0
+  frame_width: 640
+  frame_height: 480
+  fps: 30
+  # Thông số hình học Camera (Góc rộng OV5647 ~ 120° FOV hoặc webcam chuẩn)
+  f_x: 480.0                         # Tiêu cự pixel trục x
+  f_y: 480.0                         # Tiêu cự pixel trục y
+  c_x: 320.0                         # Điểm chính giữa x (frame_width / 2)
+  c_y: 240.0                         # Điểm chính giữa y (frame_height / 2)
+  camera_height_m: 1.45              # Độ cao gắn camera từ mặt sàn (mũ/ngực người dùng)
+  tilt_angle_deg: 5.0                # Góc nghiêng chúc xuống của camera (độ)
+
+ultrasonic:
+  trig_pin: 23                       # GPIO trigger trên Raspberry Pi 4
+  echo_pin: 24                       # GPIO echo (qua cầu phân áp trở 1k/2k xuống 3.3V)
+  beam_angle_deg: 30.0               # Góc chùm sóng nón của HC-SR04 (~30°, nửa góc 15°)
+  min_range_m: 0.03                  # Cự ly đo nhỏ nhất (3 cm)
+  max_range_m: 4.0                   # Cự ly đo lớn nhất (4 m)
+  poll_rate_hz: 30                   # Tần số đọc xung siêu âm
+  emergency_distance_m: 0.8          # Ngưỡng khoảng cách kích hoạt an toàn khẩn cấp
+
+kalman_filter:
+  q_accel_noise: 0.5                 # Nhiễu quá trình gia tốc sigma_a^2
+  r_ultrasonic: 0.0025               # Phương sai số đo siêu âm (sigma = 0.05m -> R = 0.05^2)
+  r_camera: 0.09                     # Phương sai số đo camera (sigma = 0.30m -> R = 0.30^2)
+  r_ultrasonic_penalized: 0.5        # Phương sai siêu âm khi bị phạt (tình huống bề mặt nghiêng/mềm)
+  gating_threshold: 4.0              # Ngưỡng loại trừ số đo lệch quá lớn (Mahalanobis distance)
+
+scale_calibration:
+  learning_rate: 0.05                # Hệ số học trung bình trượt EMA alpha
+  initial_scale: 1.0                 # Hệ số thang đo ban đầu s = d_us / d_cam
+  min_scale: 0.5                     # Giới hạn thang đo dưới
+  max_scale: 2.0                     # Giới hạn thang đo trên
+  min_stable_frames: 3               # Số frame track ổn định trước khi cập nhật scale
+
+conflict_resolution:
+  match_discrepancy_ratio: 0.25      # Ngưỡng lệch để coi là hai nguồn khớp (25%)
+  unlabeled_obstacle_confirm_count: 2 # Số lần siêu âm báo gần liên tiếp để cảnh báo vật cản không nhãn
+
+risk_scoring:
+  w_ttc: 0.40                        # Trọng số thời gian đến lúc va chạm (TTC)
+  w_distance: 0.30                   # Trọng số cự ly gần
+  w_heading: 0.15                    # Trọng số góc lệch tâm bước đi
+  w_class: 0.15                      # Trọng số mức độ nguy hại của loại vật cản
+  ttc_critical_s: 2.0                # Ngưỡng TTC cực kỳ nguy hiểm (dưới 2 giây)
+
+# Kích thước vật lý thực tế trung bình (Physical Prior Width, đơn vị: mét)
+# Dùng cho phương pháp Pinhole heuristic khi vật không chạm sàn hoặc đáy bị cắt
+reference_widths:
+  person: 0.45
+  bicycle: 0.60
+  car: 1.80
+  motorcycle: 0.80
+  bus: 2.50
+  truck: 2.50
+  traffic light: 0.35
+  fire hydrant: 0.35
+  stop sign: 0.50
+  bench: 1.40
+  chair: 0.50
+  couch: 1.60
+  potted plant: 0.40
+  dining table: 1.20
+  door: 0.85
+  stairs: 1.00
+  pole: 0.25
+  default: 0.50
+
+# Trọng số nguy hiểm theo lớp COCO (0.0: ít nguy hiểm -> 1.0: cực kỳ nguy hiểm)
+class_danger_weights:
+  stairs: 0.95
+  car: 0.95
+  bus: 0.95
+  truck: 0.95
+  motorcycle: 0.90
+  bicycle: 0.80
+  pole: 0.80
+  person: 0.70
+  fire hydrant: 0.65
+  bench: 0.55
+  chair: 0.50
+  couch: 0.50
+  dining table: 0.45
+  door: 0.30
+  potted plant: 0.30
+  default: 0.50
+
+audio:
+  language: "vi"
+  rate: 200
+  emergency_cooldown_s: 0.6          # Giãn cách giữa 2 lần cảnh báo khẩn cấp
+  tts_cooldown_s: 2.0                # Giãn cách giữa 2 câu đọc thông tin

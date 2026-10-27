@@ -5,13 +5,20 @@
 Dự án phát triển một hệ thống đeo thông minh giúp người khiếm thị nhận diện vật cản và điều hướng trong môi trường trong nhà (lớp học, hành lang). Hệ thống kết hợp trí tuệ nhân tạo biên (Edge-AI) để xử lý thời gian thực và mô hình ngôn ngữ thị giác đám mây (Cloud VLM) để cung cấp nhận thức không gian theo yêu cầu.
 
 ### 🎯 Mục tiêu phần cứng
-*   **Cụm thiết bị viền mũ:** Camera góc rộng OV5647 (120° FOV) và cảm biến khoảng cách ToF VL53L1X.
+*   **Cụm thiết bị viền mũ:** Camera góc rộng OV5647 (120° FOV) và cảm biến khoảng cách siêu âm HC-SR04 (thay thế ToF, chùm nón ~30°).
 *   **Hộp xử lý trung tâm (đeo balo):** Raspberry Pi 4 (4GB RAM) chạy độc lập bằng pin sạc dự phòng.
 *   **Loa mini đeo vai:** Phát cảnh báo tức thời không gây bít tai.
 *   **Web Dashboard:** Giám sát trạng thái phần cứng và từ xa dành cho người thân (thông qua MQTT).
 
 ## ✨ Tính năng cốt lõi
-1.  **Cảnh báo va chạm tức thời:** YOLO kết hợp ToF phát hiện vật cản tầng ngực - đầu. Cảnh báo dừng khẩn cấp (< 1m) và đọc phương hướng/cự ly (1-2m).
+1.  **Dung hợp cảm biến đa phương thức (Mức B - Khuyến nghị):**
+    *   Hợp nhất Camera YOLO và cảm biến siêu âm HC-SR04.
+    *   Khoảng cách camera kết hợp mô hình hình học mặt sàn (*Ground-plane geometry*) $d_{\text{cam}} = \frac{f_y \cdot h}{v_{\text{bottom}} - c_y}$ và *Pinhole heuristic* fallback $\frac{W_{\text{real}} \cdot f_x}{\text{bbox\_width}}$.
+    *   Bộ lọc Kalman theo từng track với vector trạng thái $[d, \dot{d}]$ (khoảng cách và tốc độ tiến lại).
+    *   Tính toán trực tiếp thời gian đến lúc va chạm: $\text{TTC} = \frac{d}{-\dot{d}}$ tích hợp vào điểm rủi ro va chạm (*Risk Score*).
+    *   Tự hiệu chỉnh thang đo trực tuyến (*Online Scale Calibration*): camera tự học thang đo $s = d_{\text{us}} / d_{\text{cam}}$ từ siêu âm để định lượng chính xác các vật ngoài chùm sóng.
+    *   Quy tắc an toàn khẩn cấp (*Fail-Safe*): bất kỳ khi nào siêu âm báo cự ly $< 0.8\text{m}$ lập tức cảnh báo dừng ngay mà không cần chờ AI gắn nhãn.
+    *   Xử lý triệt để 4 tình huống mâu thuẫn giữa Camera và Siêu âm.
 2.  **Điều hướng phản xạ trong nhà:** Chia khung hình làm 3 làn (Trái - Giữa - Phải) để chỉ dẫn người dùng lách tránh an toàn.
 3.  **Trợ lý thị giác (On-demand):** Gọi API VLM (Gemini/GPT-4V) qua nút bấm vật lý để mô tả chi tiết cảnh quan xung quanh.
 4.  **Giám sát từ xa (Telemetry):** Gửi dữ liệu pin, nhiệt độ CPU, trạng thái cảm biến lên Web Dashboard.
@@ -140,8 +147,14 @@ uv pip install -r requirements.txt
 ```
 
 ## 🚀 Hướng dẫn chạy thử nghiệm
-1. Cấu hình các API Key và thông số model trong thư mục `configs/`.
-2. Chạy file chính để khởi động luồng hệ thống:
+
+### 1. Chạy bộ kiểm thử mô phỏng toàn diện (Fusion Mức B):
 ```bash
+python 2_edge_device/experiments/test_fusion_simulation.py
+```
+
+### 2. Chạy ứng dụng điều hướng thực tế trên Edge Device:
+```bash
+cd 2_edge_device
 python main.py
 ```
