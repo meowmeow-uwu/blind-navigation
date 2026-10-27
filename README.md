@@ -145,3 +145,65 @@ uv pip install -r requirements.txt
 ```bash
 python main.py
 ```
+
+## Baseline tối thiểu cho Raspberry Pi 4B
+
+Baseline hiện chạy một main loop tuần tự cho webcam/YOLO, một thread đọc VL53L1X
+và một audio queue riêng. Không dùng tracking, TTC, risk score, fine-tuning,
+quantization, NCNN hoặc VLM trong luồng baseline.
+
+### Cài đặt và khởi chạy
+
+Trên Raspberry Pi OS 64-bit, cài thư viện hệ thống cần cho driver I2C/âm thanh
+(bao gồm `espeak-ng` cho pyttsx3), bật I2C, kết nối VL53L1X ở địa chỉ `0x29`,
+sau đó cài các phụ thuộc Python:
+
+```bash
+cd 2_edge_device
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python main.py --model modules/vision_local/models/yolov8n.onnx
+```
+
+Đặt model COCO YOLOv8n ONNX tại đường dẫn trên hoặc truyền đường dẫn khác bằng
+`--model`. Khi ONNX Runtime/model lỗi lúc khởi động hoặc inference lỗi, hệ thống
+ghi log lỗi và tiếp tục dùng ToF để phát cảnh báo fail-safe. Nếu VL53L1X không
+khởi động được, chương trình ghi WARNING và vẫn chạy camera/YOLO ở chế độ
+vision-only để phục vụ phát triển/kiểm tra. Trong chế độ này không có đo khoảng
+cách hoặc cảnh báo va chạm; không dùng thiết bị để điều hướng an toàn cho đến
+khi ToF hoạt động. Log trạng thái sẽ ghi `tof=unavailable (vision-only)`.
+
+ROI ToF mặc định là 40%-60% chiều rộng khung hình (`--roi-left`, `--roi-right`).
+Chỉnh hai giá trị này sau khi cố định camera và ToF cùng hướng; mỗi lần đo chỉ
+được ghép với một detection trung tâm gần trục ảnh nhất. Detection trái/phải
+luôn có `distance_m=None`. Các mức khoảng cách là Critical `<0.5 m`, High
+`0.5-<0.8 m`, Moderate `0.8-<1.2 m`, Low `1.2-1.5 m`, Clear `>1.5 m`.
+Mỗi lần xử lý chỉ chọn tối đa một alert; cùng loại có cooldown mặc định 3.5 giây,
+nhưng cảnh báo được phép phát ngay khi mức nguy hiểm tăng.
+
+### Kiểm thử và xác nhận phần cứng
+
+Chạy unit tests mô phỏng từ thư mục `2_edge_device`:
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+Để chạy soak test một giờ và lưu log:
+
+```bash
+python main.py --duration 3600 2>&1 | tee baseline-soak.log
+```
+
+Trên thiết bị thực, kiểm tra lần lượt năm tình huống: (1) người ở giữa, (2) ghế
+ở giữa, (3) vật thể bên trái/phải không nhận khoảng cách ToF, (4) vật cản ngoài
+khả năng nhận dạng YOLO nhưng ToF gần vẫn phát “Vật cản phía trước”, và (5)
+YOLO lỗi nhưng ToF vẫn phát cảnh báo. Kiểm tra log FPS, preprocessing,
+inference, postprocessing, sensor-to-alert latency, CPU, RAM, nhiệt độ, khoảng
+cách, detection được chọn và alert. Unit tests không thay thế việc kiểm tra một
+giờ và demo phần cứng thực tế.
+
+Trước khi baseline được đóng băng, lưu hash model (`sha256sum`), cấu hình ROI/
+threshold/cooldown, log benchmark trên Pi và Git commit cụ thể. Chỉ sau bước
+đóng băng đó mới phát triển các tính năng risk-aware trên nhánh riêng.
