@@ -1,25 +1,26 @@
 """
-main.py - Điểm khởi chạy hệ thống hỗ trợ người khiếm thị (Edge Device)
-======================================================================
-Tích hợp toàn diện:
-- Camera OV5647 / USB Webcam
-- Mô hình nhận dạng vật cản YOLOv8 NCNN
-- Bộ theo dõi đa đối tượng ByteTracker
-- Cảm biến siêu âm HC-SR04 (Đa luồng thời gian thực)
-- Động cơ hợp nhất cảm biến SensorFusionEngine (Mức B: Kalman theo từng track + Tự hiệu chỉnh thang đo)
-- Bộ điều phối âm thanh AudioFeedbackManager
+main.py - Hệ thống Hỗ trợ Người Khiếm thị Thông minh (PBL6)
+============================================================
+Kiến trúc 5 trụ cột cốt lõi:
+1. Đa luồng bất đồng bộ: Cảm biến siêu âm HC-SR04 chạy độc lập 40Hz, báo khẩn cấp tức thời (<30ms).
+2. Hợp nhất đa phương thức: Chùm sóng nón siêu âm 30 độ gắn cự ly thực tế vào vật cản gần nhất.
+3. Bám vết thời gian thực: ByteTrack cấp Track ID duy nhất, chỉ nói 1 lần rồi bám vết ngầm.
+4. Đánh giá nguy cơ (Risk Prioritization): Xếp hạng theo mức độ nguy hại, cự ly và hướng di chuyển.
+5. Giao tiếp thích ứng đa giác quan:
+   - < 1.0m: Tiếng bíp dồn dập (tần số/nhịp tăng dần), ngắt câu nói dài, tạo phản xạ dừng ngay.
+   - 1.5m - 3.0m: Giọng nói ngắn gọn 1-2 từ khóa ("Bàn trước mặt", "Cột bên trái"), không đè tiếng.
+   - > 3.0m: Im lặng thông thoáng thính giác.
 """
 
 import os
 import sys
 import time
+import argparse
 import yaml
-import logging
-from pathlib import Path
+import numpy as np
 
-# Đảm bảo import đúng cấu trúc thư mục
-CURR_DIR = Path(__file__).resolve().parent
-sys.path.insert(0, str(CURR_DIR))
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, CURRENT_DIR)
 
 try:
     import cv2
@@ -27,71 +28,61 @@ try:
 except ImportError:
     HAS_CV2 = False
 
-import numpy as np
-
-# Import các micro-modules
 from modules.sensors.ultrasonic_hcsr04 import HCSR04Sensor
-from modules.vision_local.base_detector import BaseDetector
 from modules.tracking.byte_tracker import LightweightTracker
-from core.fusion_engine import SensorFusionEngine, FusedObstacleResult
-from modules.audio_tts.audio_manager import AudioFeedbackManager
+from core.fusion_engine import SensorFusionEngine
+from modules.audio.audio_manager import AudioManager
+from modules.vision_local.synthetic_camera import SyntheticCamera
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
-    datefmt='%H:%M:%S'
-)
-logger = logging.getLogger("MAIN")
+LABEL_DISPLAY = {
+    "person": "NGUOI", "chair": "GHE", "dining table": "BAN",
+    "stairs": "CAU THANG", "pole": "COT", "door": "CUA",
+    "vật cản": "VAT CAN", "bicycle": "XE DAP", "car": "O TO"
+}
 
 
-def load_detector(config: dict) -> BaseDetector:
-    """Tải detector YOLOv8 NCNN hoặc fallback Mock Detector nếu chưa có thư viện NCNN."""
-    param_path = CURR_DIR / "modules/vision_local/models/yolov8n.param"
-    bin_path = CURR_DIR / "modules/vision_local/models/yolov8n.bin"
+def load_config() -> dict:
+    cfg_path = os.path.join(CURRENT_DIR, "configs/config.yaml")
+    if os.path.exists(cfg_path):
+        with open(cfg_path, "r", encoding="utf-8") as f:
+            return yaml.safe_load(f)
+    return {}
 
+
+def init_detector():
+    """Khởi tạo YOLOv8 NCNN hoặc Mock Detector nếu chạy trên máy tính phát triển."""
+    param_path = os.path.join(CURRENT_DIR, "modules/vision_local/models/yolov8n.param")
+    bin_path = os.path.join(CURRENT_DIR, "modules/vision_local/models/yolov8n.bin")
     try:
         from modules.vision_local.yolo_ncnn_runner import YoloNcnnRunner
-        if param_path.exists() and bin_path.exists():
-            logger.info("[AI] Đang tải mô hình YOLOv8 NCNN...")
-            return YoloNcnnRunner(str(param_path), str(bin_path), target_size=320)
-    except Exception as e:
-        logger.warning(f"[AI] Không thể khởi động NCNN ({e}). Sử dụng Mock Detector.")
+        if os.path.exists(param_path) and os.path.exists(bin_path):
+            return YoloNcnnRunner(param_path, bin_path, target_size=320)
+    except Exception:
+        pass
 
-    class MockDetector(BaseDetector):
-        """Mô phỏng phát hiện vật thể phục vụ kiểm thử."""
-        def load_model(self):
-            pass
-        def detect(self, frame: np.ndarray) -> list:
-            # Tạo ngẫu nhiên một vật cản trước mặt
-            return [
-                {
-                    'class_name': 'chair',
-                    'bbox': [240, 180, 400, 420],
-                    'confidence': 0.88
-                }
-            ]
-    return MockDetector()
+    class SimpleMockDetector:
+        def detect(self, _):
+            return [{'class_name': 'chair', 'bbox': [240, 180, 400, 420], 'confidence': 0.88}]
+    return SimpleMockDetector()
 
 
-def draw_hud(frame: np.ndarray,
-             fused_results: list,
-             us_distance: float,
-             scale_factor: float,
-             fps: float,
-             is_emergency: bool) -> np.ndarray:
-    """Vẽ giao diện giám sát HUD trực quan khi chạy chế độ debug."""
+def draw_hud(frame: np.ndarray, fused_results: list, us_dist: float, is_emergency: bool, fps: float) -> np.ndarray:
+    """Vẽ giao diện giám sát HUD trực quan (3 làn đường, góc nón siêu âm 30 độ, BBox, trạng thái)."""
     if not HAS_CV2 or frame is None:
         return frame
 
     h, w = frame.shape[:2]
     vis = frame.copy()
+    third = w // 3
 
     # 1. Vẽ 3 làn đường (Trái - Giữa - Phải)
-    third = w // 3
-    cv2.line(vis, (third, 0), (third, h), (70, 70, 70), 1, cv2.LINE_AA)
-    cv2.line(vis, (2 * third, 0), (2 * third, h), (70, 70, 70), 1, cv2.LINE_AA)
+    cv2.line(vis, (third, 0), (third, h), (70, 70, 70), 1)
+    cv2.line(vis, (2 * third, 0), (2 * third, h), (70, 70, 70), 1)
+    cv2.putText(vis, "TRAI", (third // 2 - 20, h - 12), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (160, 160, 160), 1)
+    cv2.putText(vis, "GIUA", (w // 2 - 20, h - 12), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 255), 1)
+    cv2.putText(vis, "PHAI", (2 * third + third // 2 - 20, h - 12), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (160, 160, 160), 1)
 
-    # 2. Vẽ hình nón chùm siêu âm (Beam Cone ~ 30 độ)
+    # 2. Vẽ hình nón chùm siêu âm HC-SR04 (~30 độ)
     beam_w = int(third * 0.9)
     pts = np.array([
         [w // 2, 0],
@@ -100,165 +91,179 @@ def draw_hud(frame: np.ndarray,
     ], np.int32)
     overlay = vis.copy()
     cv2.fillPoly(overlay, [pts], (255, 255, 0))
-    cv2.addWeighted(overlay, 0.15, vis, 0.85, 0, vis)
+    cv2.addWeighted(overlay, 0.12, vis, 0.88, 0, vis)
 
-    # 3. Vẽ Bounding Boxes và thông tin dung hợp
-    for item in fused_results:
+    # 3. Vẽ Bounding Boxes các vật cản sau Sensor Fusion & Xếp hạng nguy cơ (Yêu cầu 4)
+    for i, item in enumerate(fused_results):
         x1, y1, x2, y2 = item.bbox
+        is_top = (i == 0)
+        color = (0, 0, 255) if item.is_emergency else ((0, 255, 255) if is_top else (0, 255, 0))
+        cv2.rectangle(vis, (x1, y1), (x2, y2), color, 2 if not is_top else 3)
 
-        if item.is_emergency:
-            color = (0, 0, 255)  # Đỏ khẩn cấp
-            tag = "EMERGENCY"
-        elif item.risk_score >= 0.5:
-            color = (0, 255, 255)  # Vàng cảnh giác
-            tag = "URGENT"
-        else:
-            color = (0, 255, 0)  # Xanh an toàn
-            tag = "SAFE"
+        d_name = LABEL_DISPLAY.get(item.class_name, item.class_name.upper())
+        tag = f"#{item.track_id} {d_name} | {item.distance_m:.1f}m | R:{item.risk_score:.2f}"
+        if getattr(item, "is_ultrasonic_target", False):
+            tag += " [*SIEU AM]"
+        t_sz = cv2.getTextSize(tag, cv2.FONT_HERSHEY_SIMPLEX, 0.42, 1)[0]
+        cv2.rectangle(vis, (x1, max(0, y1 - 18)), (x1 + t_sz[0] + 6, max(0, y1)), color, -1)
+        cv2.putText(vis, tag, (x1 + 3, max(12, y1 - 4)), cv2.FONT_HERSHEY_SIMPLEX, 0.42, (0, 0, 0), 1)
 
-        cv2.rectangle(vis, (x1, y1), (x2, y2), color, 2)
-
-        # Label: ID | Class | Distance | TTC | Risk
-        ttc_str = f"{item.ttc_seconds:.1f}s" if item.ttc_seconds < 900 else "INF"
-        label = f"ID:{item.track_id} {item.class_name} | {item.distance_m:.2f}m | TTC:{ttc_str} | Risk:{item.risk_score:.2f}"
-
-        t_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.45, 1)[0]
-        cv2.rectangle(vis, (x1, max(0, y1 - 20)), (x1 + t_size[0], max(0, y1)), color, -1)
-        cv2.putText(vis, label, (x1, max(12, y1 - 5)),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 0), 1, cv2.LINE_AA)
-
-    # 4. Thanh Header trạng thái hệ thống
-    header_color = (0, 0, 150) if is_emergency else (30, 30, 30)
-    cv2.rectangle(vis, (0, 0), (w, 35), header_color, -1)
-    status_str = f"PBL6 Nav | FPS:{fps:.1f} | US ToF:{us_distance:.2f}m | Scale s:{scale_factor:.2f}"
+    # 4. Thanh Header trạng thái
+    hdr_color = (0, 0, 160) if is_emergency else (30, 30, 30)
+    cv2.rectangle(vis, (0, 0), (w, 30), hdr_color, -1)
+    status_msg = f"PBL6 NAV | FPS: {fps:.1f} | SIEU AM: {us_dist:.2f}m"
     if is_emergency:
-        status_str += " | 🚨 DỪNG LẠI!"
-    cv2.putText(vis, status_str, (10, 24), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 1, cv2.LINE_AA)
+        status_msg += " | [!] KHAN CAP: DUNG LAI (BEEP)"
+    cv2.putText(vis, status_msg, (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.48, (255, 255, 255), 1)
 
     return vis
 
 
 def main():
-    logger.info("=" * 65)
-    logger.info("KHỞI ĐỘNG HỆ THỐNG ĐỊNH HƯỚNG NGƯỜI KHIẾM THỊ (PBL6)")
-    logger.info("Tích hợp: Siêu âm HC-SR04 + Camera YOLO (Mức B: Kalman + Scale)")
-    logger.info("=" * 65)
+    parser = argparse.ArgumentParser(description="PBL6 - Smart Blind Navigation Edge System (Ultrasonic HC-SR04)")
+    parser.add_argument("--source", type=str, default="auto", help="Nguồn video: 'auto', 'demo', 0, hoặc đường dẫn mp4")
+    parser.add_argument("--port", type=int, default=8080, help="Cổng Web Dashboard & Audio (mặc định: 8080)")
+    parser.add_argument("--headless", action="store_true", help="Chạy không cửa sổ GUI màn hình")
+    args = parser.parse_args()
 
-    # 1. Tải cấu hình YAML
-    config_path = CURR_DIR / "configs/config.yaml"
-    with open(config_path, "r", encoding="utf-8") as f:
-        config = yaml.safe_load(f)
+    print("=" * 68)
+    print("   HỆ THỐNG ĐIỀU HƯỚNG KHIẾM THỊ THÔNG MINH (PBL6 EDGE-AI)")
+    print("   Cảm biến siêu âm HC-SR04 (30-50Hz) + Camera YOLOv8 NCNN")
+    print("=" * 68)
 
-    # 2. Khởi tạo cảm biến siêu âm HC-SR04
-    us_cfg = config.get("ultrasonic", {})
-    ultrasonic = HCSR04Sensor(
-        trig_pin=us_cfg.get("trig_pin", 23),
-        echo_pin=us_cfg.get("echo_pin", 24),
-        min_range_m=us_cfg.get("min_range_m", 0.03),
-        max_range_m=us_cfg.get("max_range_m", 4.0),
-        poll_rate_hz=us_cfg.get("poll_rate_hz", 30),
-        emergency_distance_m=us_cfg.get("emergency_distance_m", 0.8)
-    )
-    ultrasonic.start()
+    config = load_config()
 
-    # 3. Khởi tạo Camera
-    cam_cfg = config.get("camera", {})
-    cap = None
-    if HAS_CV2:
-        cap = cv2.VideoCapture(cam_cfg.get("device_id", 0))
-        cap.set(cv2.CAP_PROP_FRAME_WIDTH, cam_cfg.get("frame_width", 640))
-        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, cam_cfg.get("frame_height", 480))
-        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-
-    # 4. Khởi tạo Detector, Tracker, Fusion Engine và Audio Manager
-    detector = load_detector(config)
+    # 1. Khởi tạo Mô hình AI & Tracker
+    detector = init_detector()
+    is_mock = not hasattr(detector, "load_model")
     tracker = LightweightTracker(max_age=12, min_hits=2, iou_threshold=0.25)
     fusion_engine = SensorFusionEngine(config)
 
-    audio_cfg = config.get("audio", {})
-    audio_mgr = AudioFeedbackManager(
-        language=audio_cfg.get("language", "vi"),
-        speech_rate=audio_cfg.get("rate", 200),
-        emergency_cooldown_s=audio_cfg.get("emergency_cooldown_s", 0.6),
-        tts_cooldown_s=audio_cfg.get("tts_cooldown_s", 2.0)
-    )
+    # 2. Khởi tạo Audio Manager (Chống đè tiếng & Phân tầng phản hồi - Yêu cầu 5)
+    audio = AudioManager(port=args.port, guidance_cooldown_s=2.5)
 
-    debug_view = config.get("system", {}).get("debug_view", True) and HAS_CV2
-    fps_time = time.time()
+    # 3. Khởi tạo Cảm biến siêu âm HC-SR04 đa luồng (Yêu cầu 1: Bất đồng bộ 40Hz)
+    us_cfg = config.get("ultrasonic", {})
+    sensor = HCSR04Sensor(
+        trig_pin=us_cfg.get("trig_pin", 23),
+        echo_pin=us_cfg.get("echo_pin", 24),
+        poll_rate_hz=us_cfg.get("poll_rate_hz", 40),
+        emergency_distance_m=us_cfg.get("emergency_distance_m", 1.0)
+    )
+    # Callback khẩn cấp tức thời (<30ms) trực tiếp từ luồng siêu âm, không chờ AI
+    sensor.set_emergency_callback(lambda d: audio.trigger_emergency(d))
+    sensor.start()
+    audio.set_distance_callback(sensor.set_simulated_distance)
+
+    # 4. Khởi tạo Nguồn Video
+    cap = None
+    synth_cam = None
+    use_synthetic = (args.source.lower() in ["demo", "synthetic"])
+
+    if not use_synthetic and HAS_CV2:
+        cam_id = int(args.source) if (args.source.isdigit() and args.source != "auto") else 0
+        cap = cv2.VideoCapture(cam_id)
+        if not (cap and cap.isOpened()):
+            print("[CAMERA] Không mở được webcam vật lý -> Chuyển sang Camera Mô Phỏng 3D.")
+            use_synthetic = True
+            synth_cam = SyntheticCamera()
+    else:
+        use_synthetic = True
+        synth_cam = SyntheticCamera()
+
+    print(f"\n👉 Mở trình duyệt xem trực tiếp: http://localhost:{args.port}")
+    print("👉 Phím test cự ly: [1] 3.0m (An toàn)  [2] 2.0m (Dẫn hướng)  [3] 0.5m (Khẩn cấp)  [Q] Thoát\n")
+
     fps = 0.0
+    debug_view = (not args.headless) and HAS_CV2
 
     try:
         while True:
             t_start = time.perf_counter()
 
-            # Lấy ảnh từ Camera
-            if cap and cap.isOpened():
+            # Lấy khung hình
+            sim_dets = []
+            if use_synthetic and synth_cam:
+                _, frame, sim_dets, sim_d = synth_cam.read()
+                if sensor.is_simulated and not sensor.is_manually_overridden:
+                    sensor.set_simulated_distance(sim_d, manual=False)
+            elif cap and cap.isOpened():
                 ret, frame = cap.read()
                 if not ret:
+                    cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
                     time.sleep(0.01)
                     continue
             else:
-                # Ảnh mô phỏng nếu không có camera
                 frame = np.zeros((480, 640, 3), dtype=np.uint8)
-                frame[:] = (40, 40, 40)
 
-            # Đọc cảm biến siêu âm
-            us_dist, us_ts, is_us_emergency = ultrasonic.get_latest_reading()
+            # Đọc khoảng cách siêu âm mới nhất
+            raw_d, _, is_sensor_emergency = sensor.get_latest_reading()
 
-            # QUY TẮC AN TOÀN KHẨN CẤP:
-            # Nếu cảm biến siêu âm báo quá gần (< 0.8m), phát cảnh báo dừng ngay!
-            if is_us_emergency:
-                audio_mgr.trigger_emergency(us_dist)
-
-            # Chạy YOLO nhận dạng
-            detections = detector.detect(frame)
-
-            # Cập nhật Tracker để cấp phát Track ID
+            # Nhận diện vật thể & Bám vết (Yêu cầu 3: ByteTrack)
+            detections = sim_dets if (use_synthetic and is_mock) else detector.detect(frame)
             tracked_items = tracker.update(detections)
 
-            # Thực thi Sensor Fusion (Mức B: Kalman theo từng track + Hiệu chỉnh scale)
-            fused_results, global_emergency = fusion_engine.fuse(tracked_items, us_dist)
+            # Hợp nhất cảm biến siêu âm & Xếp hạng nguy cơ (Yêu cầu 2 & 4)
+            fused_results, global_emergency = fusion_engine.fuse(tracked_items, raw_d)
 
-            # Xử lý âm thanh dựa trên kết quả dung hợp
-            if global_emergency:
-                audio_mgr.trigger_emergency(us_dist)
-            elif fused_results:
-                top_obstacle = fused_results[0]
-                audio_mgr.announce_obstacle(
-                    track_id=top_obstacle.track_id,
-                    class_name=top_obstacle.class_name,
-                    distance_m=top_obstacle.distance_m,
-                    lane=top_obstacle.lane,
-                    is_emergency=top_obstacle.is_emergency
-                )
+            # Điều phối phản hồi thích ứng đa giác quan (Yêu cầu 5)
+            if global_emergency or is_sensor_emergency or (raw_d is not None and raw_d < 1.0):
+                audio.trigger_emergency(raw_d or 0.8)
+            else:
+                audio.clear_emergency()
+                # Nếu có vật cản và nằm trong khoảng dẫn hướng (1.5m - 3.0m)
+                if fused_results:
+                    top = fused_results[0]
+                    # Chỉ thông báo 1-2 từ khoá và ĐÚNG 1 LẦN duy nhất theo Track ID (Yêu cầu 3 & 5)
+                    if 1.5 <= top.distance_m <= 3.0 and top.track_id != -1:
+                        for trk in tracker.tracks:
+                            if trk.track_id == top.track_id and not trk.announced:
+                                spoken = audio.announce_guidance(top.track_id, top.class_name, top.lane, top.distance_m)
+                                if spoken:
+                                    trk.mark_announced(top.distance_m)
+                                break
 
-            # Tính toán FPS
+            # Tính FPS và vẽ HUD
             t_elapsed = time.perf_counter() - t_start
             fps = 0.9 * fps + 0.1 * (1.0 / max(1e-4, t_elapsed))
 
-            # Hiển thị giao diện nếu bật debug_view
+            vis_frame = draw_hud(
+                frame=frame,
+                fused_results=fused_results,
+                us_dist=raw_d,
+                is_emergency=global_emergency or is_sensor_emergency,
+                fps=fps
+            )
+            audio.update_frame(vis_frame)
+
+            # Hiển thị cửa sổ Desktop và nhận phím bấm mô phỏng
             if debug_view:
-                vis_frame = draw_hud(
-                    frame=frame,
-                    fused_results=fused_results,
-                    us_distance=us_dist,
-                    scale_factor=fusion_engine.scale_calibrator.scale,
-                    fps=fps,
-                    is_emergency=global_emergency or is_us_emergency
-                )
                 cv2.imshow("PBL6 - Smart Blind Navigation", vis_frame)
-                if cv2.waitKey(1) & 0xFF == ord('q'):
+                key = cv2.waitKey(1) & 0xFF
+                if key in [ord('q'), 27]:
                     break
+                elif key == ord('1'):
+                    sensor.set_simulated_distance(3.0, manual=True)
+                elif key == ord('2'):
+                    sensor.set_simulated_distance(2.0, manual=True)
+                elif key == ord('3'):
+                    sensor.set_simulated_distance(0.5, manual=True)
+                elif key == ord('4'):
+                    sensor.set_simulated_distance(0.7, manual=True)
+            else:
+                time.sleep(max(0.001, 0.033 - t_elapsed))
 
     except KeyboardInterrupt:
-        logger.info("\nNgười dùng yêu cầu dừng hệ thống.")
+        pass
     finally:
-        ultrasonic.stop()
+        print("\n[INFO] Đang đóng hệ thống an toàn...")
+        audio.stop()
+        sensor.stop()
         if cap and cap.isOpened():
             cap.release()
         if HAS_CV2:
             cv2.destroyAllWindows()
-        logger.info("Đã giải phóng tài nguyên. Hệ thống an toàn.")
+        print("[DONE] Đã giải phóng toàn bộ tài nguyên.")
 
 
 if __name__ == "__main__":

@@ -1,12 +1,19 @@
 """
-fusion_engine.py - Động cơ hợp nhất cảm biến Siêu âm HC-SR04 & Camera YOLO (Mức B)
-==================================================================================
-Hiện thực hoá toàn bộ logic Fusion:
-1. Xác định vật cản nằm trong chùm siêu âm (Beam Cone).
-2. Xử lý triệt để 4 tình huống trong Bảng Mâu Thuẫn (Conflict Resolution Matrix).
-3. Quy tắc an toàn khẩn cấp (Fail-Safe Emergency Rule).
-4. Tính toán chỉ số nguy cơ va chạm (Risk Score) tích hợp TTC = d / (-ḋ).
-5. Phân làn điều hướng 3 làn (Trái - Giữa - Phải).
+fusion_engine.py - Động cơ hợp nhất cảm biến Siêu âm HC-SR04 & Camera (Mức B)
+=============================================================================
+Hiện thực hoá toàn diện theo đúng đặc tính vật lý CẢM BIẾN SIÊU ÂM:
+1. Yêu cầu 2: Hợp nhất cảm biến đa phương thức (Multimodal Sensor Fusion)
+   - Chùm sóng âm hình nón (Acoustic Beam Cone): HC-SR04 có góc mở ~30 độ (nửa góc 15 độ).
+   - Sóng siêu âm phản xạ từ bề mặt gần nhất trong chùm phát -> Gán cự ly đo được của
+     cảm biến siêu âm cho vật thể gần nhất nằm trong góc chùm sóng.
+   - Gói tin hoàn chỉnh: [Tên vật thể + Tọa độ BBox + Khoảng cách siêu âm thực tế].
+2. Yêu cầu 4: Đánh giá nguy cơ & Xếp hạng ưu tiên (Risk Prioritization)
+   - Công thức tính điểm nguy cơ va chạm dựa trên 3 yếu tố:
+     (1) Mức độ nguy hiểm loại vật cản (S_class: stairs, car, pole > chair, bottle)
+     (2) Khoảng cách thực tế (S_dist: gần thì điểm cao)
+     (3) Vị trí hướng đi thẳng (S_lane: làn giữa trung tâm > hai bên rìa)
+   - Vật nguy hiểm nhất luôn được xếp đầu danh sách để ưu tiên cảnh báo trước.
+3. Kế thừa Bộ lọc Kalman [d, ḋ], TTC = d / (-ḋ) và Tự hiệu chỉnh thang đo trực tuyến.
 """
 
 import time
@@ -23,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class FusedObstacleResult:
-    """Kết quả hoàn chỉnh của một vật cản sau khi hợp nhất."""
+    """Gói tin kết quả hoàn chỉnh của vật cản sau khi hợp nhất đa phương thức."""
     track_id: int
     class_name: str
     confidence: float
@@ -31,23 +38,24 @@ class FusedObstacleResult:
     distance_m: float
     velocity_mps: float         # d_dot: âm khi đang tiến lại gần
     closing_speed_mps: float    # -d_dot: dương khi tiến lại gần
-    ttc_seconds: float          # Time-To-Collision
+    ttc_seconds: float          # Time-To-Collision (s)
     lane: str                   # "left", "center", "right"
     risk_score: float           # [0.0 - 1.0]
-    is_emergency: bool          # Nguy hiểm cận kề (< 0.8m hoặc TTC < 1.5s)
-    source_status: str          # "two_sources_matched", "us_penalized", "camera_only", "unlabeled_obstacle"
+    is_emergency: bool          # Nguy hiểm cận kề (< 1.0m hoặc TTC < 1.5s)
+    source_status: str          # "two_sources_matched", "us_penalized", "camera_only", "unlabeled_obstacle", "camera_scaled"
     estimation_method: str      # "ground_plane", "pinhole_heuristic", "ultrasonic_direct"
+    is_ultrasonic_target: bool = False  # True nếu là vật nhận phản xạ sóng siêu âm
+    is_laser_target: bool = False       # Alias giữ tương thích
 
 
 class SensorFusionEngine:
     """
-    Bộ não trung tâm điều phối dung hợp cảm biến siêu âm HC-SR04 và Camera.
+    Bộ não điều phối hợp nhất dữ liệu không gian giữa Cảm biến Siêu âm HC-SR04 và Camera.
     """
 
     def __init__(self, config: Dict[str, Any]):
         self.config = config
 
-        # 1. Khởi tạo bộ ước lượng khoảng cách camera
         cam_cfg = config.get("camera", {})
         ref_widths = config.get("reference_widths", {})
         self.cam_estimator = CameraDistanceEstimator(
@@ -62,7 +70,7 @@ class SensorFusionEngine:
             reference_widths=ref_widths
         )
 
-        # 2. Bộ tự hiệu chỉnh thang đo trực tuyến (Online Scale Calibrator)
+        # Bộ tự hiệu chỉnh thang đo trực tuyến
         scale_cfg = config.get("scale_calibration", {})
         self.scale_calibrator = OnlineScaleCalibrator(
             learning_rate=scale_cfg.get("learning_rate", 0.05),
@@ -72,13 +80,14 @@ class SensorFusionEngine:
             min_stable_frames=scale_cfg.get("min_stable_frames", 3)
         )
 
-        # 3. Cấu hình chùm sóng siêu âm
+        # Cấu hình chùm sóng nón siêu âm HC-SR04 (~30 độ)
         us_cfg = config.get("ultrasonic", {})
-        self.beam_angle_rad = math.radians(us_cfg.get("beam_angle_deg", 30.0))
+        self.beam_angle_deg = us_cfg.get("beam_angle_deg", 30.0)
+        self.beam_angle_rad = math.radians(self.beam_angle_deg)
         self.half_beam_angle_rad = self.beam_angle_rad / 2.0
-        self.emergency_distance_m = us_cfg.get("emergency_distance_m", 0.8)
+        self.emergency_distance_m = us_cfg.get("emergency_distance_m", 1.0)
 
-        # 4. Cấu hình Kalman Filter
+        # Cấu hình Kalman Filter
         self.kf_cfg = config.get("kalman_filter", {})
         self.q_accel_noise = self.kf_cfg.get("q_accel_noise", 0.5)
         self.r_us = self.kf_cfg.get("r_ultrasonic", 0.0025)
@@ -86,10 +95,9 @@ class SensorFusionEngine:
         self.r_us_penalized = self.kf_cfg.get("r_ultrasonic_penalized", 0.50)
         self.gating_threshold = self.kf_cfg.get("gating_threshold", 4.0)
 
-        # 5. Cấu hình xung đột & rủi ro
+        # Cấu hình xung đột & xếp hạng rủi ro
         conflict_cfg = config.get("conflict_resolution", {})
         self.match_ratio = conflict_cfg.get("match_discrepancy_ratio", 0.25)
-
         self.risk_cfg = config.get("risk_scoring", {})
         self.danger_weights = config.get("class_danger_weights", {})
 
@@ -98,24 +106,20 @@ class SensorFusionEngine:
 
     def is_in_ultrasonic_beam(self, bbox: Tuple[int, int, int, int]) -> bool:
         """
-        Kiểm tra xem Bounding Box có giao cắt với góc nón phát sóng siêu âm hay không.
-        HC-SR04 được gắn thẳng trục chính diện của camera.
+        Kiểm tra xem Bounding Box có nằm trong góc nón chùm sóng siêu âm HC-SR04 hay không.
+        Góc lệch trục ngang: theta_x = arctan((cx - c_x) / f_x).
+        HC-SR04 gắn chính diện trục giữa của camera.
         """
-        x1, y1, x2, y2 = bbox
-        cx = (x1 + x2) / 2.0
-
-        # Tính góc lệch phương vị trục ngang: theta_x = arctan((cx - c_x) / f_x)
+        cx = (bbox[0] + bbox[2]) / 2.0
         delta_x = cx - self.cam_estimator.c_x
         theta_x = abs(math.atan2(delta_x, self.cam_estimator.f_x))
-
         return theta_x <= self.half_beam_angle_rad
 
     def classify_lane(self, bbox: Tuple[int, int, int, int]) -> str:
-        """Phân làn điều hướng 3 làn: Trái - Giữa - Phải."""
+        """Phân làn 3 vùng: Trái - Giữa - Phải."""
         cx = (bbox[0] + bbox[2]) / 2.0
         width = self.cam_estimator.frame_width
         third = width / 3.0
-
         if cx < third:
             return "left"
         elif cx < 2.0 * third:
@@ -129,46 +133,39 @@ class SensorFusionEngine:
                            bbox: Tuple[int, int, int, int],
                            class_name: str) -> float:
         """
-        Tính điểm nguy cơ va chạm tổng hợp (Risk Score) theo yêu cầu Vấn đề 4:
-        Risk = w_ttc * f(TTC) + w_d * f(d) + w_theta * f(theta) + w_class * f(class)
+        Tính điểm nguy cơ va chạm (Risk Score) theo 3 yếu tố cốt lõi (Yêu cầu 4):
+        1. Mức độ nguy hiểm của loại vật cản (S_class): cầu thang, xe, cột > bàn, ghế
+        2. Khoảng cách thực tế (S_dist): càng gần điểm càng cao
+        3. Vị trí hướng đi thẳng (S_lane / S_heading): ở giữa đường đi ưu tiên hơn hai rìa
         """
-        w_ttc = self.risk_cfg.get("w_ttc", 0.40)
-        w_d = self.risk_cfg.get("w_distance", 0.30)
-        w_theta = self.risk_cfg.get("w_heading", 0.15)
-        w_class = self.risk_cfg.get("w_class", 0.15)
+        w_dist = self.risk_cfg.get("w_distance", 0.40)
+        w_class = self.risk_cfg.get("w_class", 0.30)
+        w_heading = self.risk_cfg.get("w_heading", 0.20)
+        w_ttc = self.risk_cfg.get("w_ttc", 0.10)
 
-        # 1. Thành phần TTC (Cực kỳ nguy hiểm nếu TTC < 2 giây)
-        if ttc < 900.0:
-            # f_ttc tăng nhanh khi TTC nhỏ
-            f_ttc = math.exp(-max(0.0, ttc) / 1.8)
-        else:
-            f_ttc = 0.0
+        # 1. Yếu tố khoảng cách thực tế (càng gần càng nguy hiểm)
+        s_dist = math.exp(-1.1 * max(0.05, distance))
 
-        # 2. Thành phần cự ly (Proximity Decay)
-        f_d = math.exp(-1.5 * max(0.05, distance))
+        # 2. Yếu tố loại vật cản
+        s_class = self.danger_weights.get(class_name, self.danger_weights.get("default", 0.50))
 
-        # 3. Thành phần góc lệch tâm (Heading Alignment): trung tâm nguy hiểm hơn hai rìa
+        # 3. Yếu tố vị trí hướng đi thẳng (tâm góc nhìn là hướng di chuyển)
         cx = (bbox[0] + bbox[2]) / 2.0
-        norm_x = abs(cx - self.cam_estimator.c_x) / (self.cam_estimator.frame_width / 2.0)
-        f_theta = max(0.0, 1.0 - norm_x * 0.7)
+        norm_offset = abs(cx - self.cam_estimator.c_x) / (self.cam_estimator.frame_width / 2.0)
+        s_heading = max(0.2, 1.0 - norm_offset * 0.7)
 
-        # 4. Mức độ nguy hại theo lớp
-        f_class = self.danger_weights.get(class_name, self.danger_weights.get("default", 0.50))
+        # Thành phần TTC bổ sung nếu đang tiến lại gần nhanh
+        s_ttc = math.exp(-max(0.0, ttc) / 2.0) if ttc < 900.0 else 0.0
 
-        risk = w_ttc * f_ttc + w_d * f_d + w_theta * f_theta + w_class * f_class
-        return round(min(1.0, max(0.0, risk)), 3)
+        total_risk = w_dist * s_dist + w_class * s_class + w_heading * s_heading + w_ttc * s_ttc
+        return round(min(1.0, max(0.0, total_risk)), 3)
 
     def fuse(self,
              tracked_items: List[TrackedItem],
              raw_us_distance: Optional[float],
              dt: Optional[float] = None) -> Tuple[List[FusedObstacleResult], bool]:
         """
-        Hàm thực thi chính của Sensor Fusion:
-        Args:
-            tracked_items: Danh sách các track từ Tracker
-            raw_us_distance: Số đo khoảng cách hiện tại từ siêu âm (hoặc None nếu mất tín hiệu)
-            dt: Khoảng thời gian từ lần xử lý trước (giây)
-
+        Thực thi hợp nhất cảm biến siêu âm và xếp hạng ưu tiên:
         Returns:
             (fused_obstacles_sorted_by_risk, global_emergency_flag)
         """
@@ -180,22 +177,15 @@ class SensorFusionEngine:
         fused_results: List[FusedObstacleResult] = []
         global_emergency = False
 
-        # QUY TẮC AN TOÀN TUYỆT ĐỐI (FAIL-SAFE):
-        # Bất kỳ khi nào cảm biến siêu âm báo gần hơn ngưỡng khẩn cấp (< 0.8m),
-        # lập tức kích hoạt cờ khẩn cấp, không chờ AI gắn nhãn!
         if raw_us_distance is not None and 0.03 <= raw_us_distance < self.emergency_distance_m:
             global_emergency = True
 
-        # =====================================================================
-        # 1. BƯỚC 1: DỰ ĐOÁN VÀ ƯỚC LƯỢNG KHOẢNG CÁCH CAMERA CHO TỪNG TRACK
-        # =====================================================================
+        curr_scale = self.scale_calibrator.scale
         tracks_in_beam: List[Tuple[TrackedItem, float, str]] = []
         tracks_outside_beam: List[Tuple[TrackedItem, float, str]] = []
 
-        curr_scale = self.scale_calibrator.scale
-
+        # 1. Cập nhật ước lượng Camera cho từng track
         for track in tracked_items:
-            # Khởi tạo bộ lọc Kalman nếu là track mới
             d_cam, est_method = self.cam_estimator.estimate_distance(
                 track.bbox, track.class_name, scale_factor=curr_scale
             )
@@ -209,13 +199,9 @@ class SensorFusionEngine:
                     gating_threshold=self.gating_threshold
                 )
             else:
-                # Bước dự đoán Kalman
                 track.kalman_dist.predict(dt)
 
-            # Cập nhật số đo Camera cho mọi track ở mọi frame
             track.kalman_dist.update_camera(d_cam)
-
-            # Kiểm tra xem vật thể có nằm trong chùm phát siêu âm không
             in_beam = self.is_in_ultrasonic_beam(track.bbox)
             track.is_in_ultrasonic_beam = in_beam
             track.lane = self.classify_lane(track.bbox)
@@ -225,16 +211,10 @@ class SensorFusionEngine:
             else:
                 tracks_outside_beam.append((track, d_cam, est_method))
 
-        # =====================================================================
-        # 2. BƯỚC 2: XỬ LÝ THEO BẢNG MÂU THUẪN (CONFLICT RESOLUTION MATRIX)
-        # =====================================================================
-
-        # Tình huống 3: Siêu âm báo gần, nhưng Camera không thấy bất kỳ vật nào trong chùm
-        # (Ví dụ: kính trong suốt, vách tường trắng nhẵn, hoặc vật cản lạ không có nhãn COCO)
+        # 2. Xử lý vật cản vô hình / không nhãn (Tình huống 3: Kính trong suốt, tường trơn)
         if raw_us_distance is not None and raw_us_distance < 2.0 and len(tracks_in_beam) == 0:
             self.unlabeled_trigger_count += 1
             if self.unlabeled_trigger_count >= 2:
-                # Tạo một vật cản không nhãn ở làn giữa để bảo vệ an toàn ngay
                 is_emer = raw_us_distance < self.emergency_distance_m
                 if is_emer:
                     global_emergency = True
@@ -252,45 +232,39 @@ class SensorFusionEngine:
                     risk_score=0.95 if is_emer else 0.75,
                     is_emergency=is_emer,
                     source_status="unlabeled_obstacle",
-                    estimation_method="ultrasonic_direct"
+                    estimation_method="ultrasonic_direct",
+                    is_ultrasonic_target=True,
+                    is_laser_target=True
                 )
                 fused_results.append(unlabeled_obs)
         else:
             self.unlabeled_trigger_count = 0
 
-        # Tình huống 4: Nhiều vật trong một chùm siêu âm
-        # Chùm siêu âm phản xạ từ bề mặt gần nhất -> Gán echo cho bbox có d_cam gần nhất
+        # 3. Gắn kết khoảng cách siêu âm cho vật trong chùm sóng nón (Yêu cầu 2)
+        # Sóng âm HC-SR04 phản xạ từ bề mặt gần nhất -> gán echo cho vật có d_cam gần nhất trong chùm
         if len(tracks_in_beam) > 0 and raw_us_distance is not None:
-            # Sắp xếp các vật trong chùm theo d_cam tăng dần
             tracks_in_beam.sort(key=lambda item: item[1])
 
-            # Vật gần nhất nhận echo siêu âm
             closest_track, closest_d_cam, closest_method = tracks_in_beam[0]
-
-            # Kiểm tra Tình huống 1 & Tình huống 2 đối với vật gần nhất này:
             ratio_diff = abs(raw_us_distance - closest_d_cam) / max(0.1, min(raw_us_distance, closest_d_cam))
 
-            if ratio_diff <= self.match_ratio:
-                # --- TÌNH HUỐNG 1: Hai nguồn khớp (lệch dưới 25%) ---
-                # Cập nhật Kalman bình thường với phương sai chuẩn
-                closest_track.kalman_dist.update_ultrasonic(raw_us_distance)
-                # Tự hiệu chỉnh thang đo trực tuyến (Online Scale Calibration)
-                self.scale_calibrator.update(raw_us_distance, closest_d_cam, closest_track.age)
-                source_status = "two_sources_matched"
-            elif raw_us_distance > closest_d_cam * (1.0 + self.match_ratio):
-                # --- TÌNH HUỐNG 2: Siêu âm xa hơn camera nhiều (vật mềm tiêu âm, bề mặt nghiêng) ---
-                # Phạt phương sai siêu âm, tin camera hơn, cảnh báo bảo thủ (lấy min)
+            if raw_us_distance > closest_d_cam * (1.0 + self.match_ratio):
+                # Tình huống 2: Cảm biến báo xa hơn camera nhiều (tiêu âm, phản xạ trượt) -> Phạt siêu âm
                 closest_track.kalman_dist.update_ultrasonic(raw_us_distance, variance_override=self.r_us_penalized)
-                # Đảm bảo khoảng cách bảo thủ
                 if closest_track.kalman_dist.distance > closest_d_cam:
                     closest_track.kalman_dist.x[0, 0] = closest_d_cam
                 source_status = "us_penalized"
-            else:
-                # Siêu âm gần hơn camera một chút: Cập nhật siêu âm để đảm bảo an toàn
+            elif ratio_diff <= self.match_ratio:
+                # Tình huống 1: Hai nguồn khớp -> Cập nhật siêu âm chuẩn và tự học thang đo scale s
                 closest_track.kalman_dist.update_ultrasonic(raw_us_distance)
+                self.scale_calibrator.update(raw_us_distance, closest_d_cam, closest_track.age)
+                source_status = "two_sources_matched"
+            else:
+                # Siêu âm gần hơn camera một chút: Cập nhật siêu âm đảm bảo an toàn
+                closest_track.kalman_dist.update_ultrasonic(raw_us_distance, enforce_gating=False)
+                closest_track.kalman_dist.x[0, 0] = raw_us_distance
                 source_status = "two_sources_matched"
 
-            # Đóng gói kết quả cho vật gần nhất
             d_final = closest_track.kalman_dist.distance
             ttc = closest_track.kalman_dist.get_ttc()
             v_dot = closest_track.kalman_dist.velocity
@@ -312,10 +286,12 @@ class SensorFusionEngine:
                 risk_score=risk,
                 is_emergency=is_emer,
                 source_status=source_status,
-                estimation_method=closest_method
+                estimation_method=closest_method,
+                is_ultrasonic_target=True,
+                is_laser_target=True
             ))
 
-            # Các vật còn lại trong chùm: Dùng ước lượng camera đã được scale bởi s
+            # Các vật còn lại trong chùm sóng nón: dùng khoảng cách camera đã được chuẩn hóa bởi scale s
             for other_track, other_d_cam, other_method in tracks_in_beam[1:]:
                 d_final = other_track.kalman_dist.distance
                 ttc = other_track.kalman_dist.get_ttc()
@@ -338,10 +314,12 @@ class SensorFusionEngine:
                     risk_score=risk,
                     is_emergency=is_emer,
                     source_status="camera_scaled",
-                    estimation_method=other_method
+                    estimation_method=other_method,
+                    is_ultrasonic_target=False,
+                    is_laser_target=False
                 ))
 
-        # Các vật nằm ngoài chùm siêu âm: dùng ước lượng camera (đã hưởng lợi từ thang đo s tự học)
+        # 4. Các vật ngoài chùm siêu âm
         for out_track, out_d_cam, out_method in tracks_outside_beam:
             d_final = out_track.kalman_dist.distance
             ttc = out_track.kalman_dist.get_ttc()
@@ -364,10 +342,12 @@ class SensorFusionEngine:
                 risk_score=risk,
                 is_emergency=is_emer,
                 source_status="camera_scaled",
-                estimation_method=out_method
+                estimation_method=out_method,
+                is_ultrasonic_target=False,
+                is_laser_target=False
             ))
 
-        # Sắp xếp danh sách kết quả theo điểm rủi ro (Risk Score) giảm dần
+        # YÊU CẦU 4: XẾP HẠNG ƯU TIÊN THEO RISK SCORE GIẢM DẦN
         fused_results.sort(key=lambda x: x.risk_score, reverse=True)
 
         return fused_results, global_emergency

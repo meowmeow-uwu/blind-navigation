@@ -234,10 +234,10 @@ class TrackDistanceKalmanFilter:
         r = variance_override if variance_override is not None else self.r_cam_default
         return self._update_measurement(z_cam, r, enforce_gating=True)
 
-    def update_ultrasonic(self, z_us: float, variance_override: Optional[float] = None) -> bool:
-        """Cập nhật số đo từ Siêu âm HC-SR04 (phương sai nhỏ, độ tin cậy cao)."""
+    def update_ultrasonic(self, z_us: float, variance_override: Optional[float] = None, enforce_gating: bool = True) -> bool:
+        """Cập nhật số đo từ Siêu âm HC-SR04 / Laser (phương sai nhỏ, độ tin cậy cao)."""
         r = variance_override if variance_override is not None else self.r_us_default
-        success = self._update_measurement(z_us, r, enforce_gating=True)
+        success = self._update_measurement(z_us, r, enforce_gating=enforce_gating)
         if success:
             self.us_updates_count += 1
         return success

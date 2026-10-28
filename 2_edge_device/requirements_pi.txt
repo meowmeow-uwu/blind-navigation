@@ -1,0 +1,17 @@
+# PBL6 - Smart Blind Navigation (Dependencies for Raspberry Pi 4)
+# Python 3.9+ trên Raspberry Pi OS (Bullseye / Bookworm 64-bit)
+
+# Thư viện xử lý ma trận và toán học
+numpy>=1.22.0
+scipy>=1.10.0
+
+# Xử lý ảnh và cấu hình
+opencv-python-headless>=4.6.0.66
+PyYAML>=6.0
+
+# Điều khiển phần cứng Raspberry Pi
+RPi.GPIO>=0.7.1
+
+# Mô hình NCNN siêu nhẹ cho Raspberry Pi 4 CPU (SIMD NEON)
+ncnn>=1.0.20230517
+

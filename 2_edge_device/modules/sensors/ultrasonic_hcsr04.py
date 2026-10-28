@@ -1,34 +1,34 @@
 """
-ultrasonic_hcsr04.py - Driver cảm biến khoảng cách siêu âm HC-SR04
-===================================================================
-Hỗ trợ đo khoảng cách thời gian thực trên Raspberry Pi 4 với:
-- Tần số đo: 20-40 Hz (bất đồng bộ đa luồng).
-- Bộ lọc trung vị (Median Filter) chống gai nhiễu phản xạ.
-- Cơ chế Mock Driver tự động khi chạy thử nghiệm trên máy tính phát triển (Mac/PC).
-- Tích hợp cờ ngắt an toàn khẩn cấp (Emergency Fail-Safe) khi cự ly < ngưỡng quy định.
+ultrasonic_hcsr04.py - Driver cảm biến khoảng cách siêu âm / Laser (30-50 Hz)
+=============================================================================
+Yêu cầu 1: Kiến trúc xử lý bất đồng bộ đa luồng (Multi-threaded Asynchronous)
+- Luồng cảm biến chạy độc lập ở tần số cao (30-50 Hz).
+- Tích hợp Callback ngắt khẩn cấp trực tiếp (< 30ms) khi phát hiện cự ly < ngưỡng,
+  hoàn toàn không bị phụ thuộc hay nghẽn bởi tốc độ suy luận của mô hình AI!
+- Bộ đệm dữ liệu an toàn luồng (Thread-safe) và cơ chế Non-blocking Queue.
+- Hỗ trợ cả phần cứng thật (RPi.GPIO) lẫn chế độ mô phỏng (Simulation/Keyboard/Web).
 """
 
 import time
+import queue
 import threading
 import logging
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Callable
 from collections import deque
 
 logger = logging.getLogger(__name__)
 
-# Kiểm tra thư viện phần cứng RPi.GPIO
 try:
     import RPi.GPIO as GPIO
     HAS_RPI_GPIO = True
 except (ImportError, RuntimeError):
     HAS_RPI_GPIO = False
-    logger.warning("[HC-SR04] RPi.GPIO không khả dụng. Chạy ở chế độ MOCK (Simulation).")
 
 
 class HCSR04Sensor:
     """
-    Driver cảm biến siêu âm HC-SR04 chạy đa luồng độc lập.
-    Đo khoảng cách dựa trên thời gian bay của sóng âm (Speed of sound ~ 343 m/s).
+    Driver cảm biến khoảng cách chạy đa luồng độc lập (30-50 Hz).
+    Phản ứng khẩn cấp tức thời (< 30ms) qua callback độc lập với luồng AI.
     """
 
     def __init__(self,
@@ -36,14 +36,14 @@ class HCSR04Sensor:
                  echo_pin: int = 24,
                  min_range_m: float = 0.03,
                  max_range_m: float = 4.0,
-                 poll_rate_hz: int = 30,
-                 emergency_distance_m: float = 0.8,
-                 filter_window: int = 5):
+                 poll_rate_hz: int = 40,
+                 emergency_distance_m: float = 1.0,
+                 filter_window: int = 3):
         self.trig_pin = trig_pin
         self.echo_pin = echo_pin
         self.min_range_m = min_range_m
         self.max_range_m = max_range_m
-        self.poll_interval = 1.0 / poll_rate_hz
+        self.poll_interval = 1.0 / max(10, min(poll_rate_hz, 100))
         self.emergency_distance_m = emergency_distance_m
         self.filter_window = filter_window
 
@@ -57,117 +57,150 @@ class HCSR04Sensor:
         self._history = deque(maxlen=filter_window)
         self._is_emergency: bool = False
 
-        # Giá trị mô phỏng phục vụ Unit Test / Mock
+        # Hàng đợi bất đồng bộ (Non-blocking Queue)
+        self.reading_queue: queue.Queue = queue.Queue(maxsize=10)
+
+        # Callback khẩn cấp trực tiếp phản ứng < 30ms (Yêu cầu 1)
+        self._emergency_callback: Optional[Callable[[float], None]] = None
+        self._last_emergency_cb_time = 0.0
+
+        # Mô phỏng (Simulation)
         self._simulated_distance: float = 2.5
         self._is_simulated = not HAS_RPI_GPIO
+        self.is_manually_overridden = False
 
         if HAS_RPI_GPIO:
             self._setup_gpio()
 
+    def set_emergency_callback(self, cb: Callable[[float], None]):
+        """Đăng ký callback gọi tức thời (< 30ms) khi cảm biến phát hiện cự ly khẩn cấp."""
+        self._emergency_callback = cb
+
     def _setup_gpio(self):
-        """Khởi tạo chân GPIO cho Trigger và Echo."""
         try:
             GPIO.setmode(GPIO.BCM)
             GPIO.setup(self.trig_pin, GPIO.OUT)
             GPIO.setup(self.echo_pin, GPIO.IN)
             GPIO.output(self.trig_pin, GPIO.LOW)
-            time.sleep(0.05)  # Chờ cảm biến ổn định
-            logger.info(f"[HC-SR04] Khởi tạo GPIO BCM: TRIG={self.trig_pin}, ECHO={self.echo_pin}")
+            time.sleep(0.05)
         except Exception as e:
-            logger.error(f"[HC-SR04] Lỗi khởi tạo GPIO: {e}")
+            logger.error(f"[DISTANCE SENSOR] Lỗi GPIO: {e}. Chuyển sang mô phỏng.")
             self._is_simulated = True
 
     def _raw_measure(self) -> Optional[float]:
-        """Đo trực tiếp 1 xung siêu âm (Hardware)."""
         if self._is_simulated:
             return self._simulated_distance
 
         try:
-            # Phát xung 10 micro-giây
             GPIO.output(self.trig_pin, GPIO.HIGH)
             time.sleep(0.00001)
             GPIO.output(self.trig_pin, GPIO.LOW)
 
             pulse_start = time.time()
-            timeout = pulse_start + 0.04  # Timeout 40ms (~ 6.8m)
+            timeout = pulse_start + 0.03
 
-            # Chờ chân Echo lên HIGH
             while GPIO.input(self.echo_pin) == GPIO.LOW:
                 pulse_start = time.time()
                 if pulse_start > timeout:
                     return None
 
-            # Chờ chân Echo xuống LOW
             pulse_end = time.time()
             while GPIO.input(self.echo_pin) == GPIO.HIGH:
                 pulse_end = time.time()
                 if pulse_end > timeout:
                     return None
 
-            pulse_duration = pulse_end - pulse_start
-            # Khoảng cách = (thời gian * 343 m/s) / 2
-            distance_m = (pulse_duration * 343.0) / 2.0
-
+            duration = pulse_end - pulse_start
+            distance_m = (duration * 343.0) / 2.0
             if self.min_range_m <= distance_m <= self.max_range_m:
                 return distance_m
             return None
-        except Exception as e:
-            logger.error(f"[HC-SR04] Lỗi đo xung: {e}")
+        except Exception:
             return None
 
     def _poll_loop(self):
-        """Vòng lặp đọc cảm biến liên tục trên luồng riêng."""
+        """Vòng lặp đọc cảm biến tốc độ cao (30-50 Hz) chạy độc lập."""
         while self._running:
-            start_t = time.perf_counter()
+            t0 = time.perf_counter()
             dist = self._raw_measure()
 
             if dist is not None:
                 with self._lock:
                     self._history.append(dist)
-                    # Lọc trung vị (Median Filter) để loại bỏ nhiễu gai
                     sorted_vals = sorted(self._history)
                     median_val = sorted_vals[len(sorted_vals) // 2]
                     self._latest_distance_m = median_val
                     self._latest_timestamp = time.time()
-                    self._is_emergency = (median_val < self.emergency_distance_m)
+                    is_emer = (median_val < self.emergency_distance_m)
+                    self._is_emergency = is_emer
 
-            elapsed = time.perf_counter() - start_t
-            sleep_time = max(0.0, self.poll_interval - elapsed)
+                # Đẩy vào Non-blocking Queue
+                try:
+                    self.reading_queue.put_nowait((median_val, self._latest_timestamp, is_emer))
+                except queue.Full:
+                    try:
+                        self.reading_queue.get_nowait()
+                        self.reading_queue.put_nowait((median_val, self._latest_timestamp, is_emer))
+                    except Exception:
+                        pass
+
+                # KÍCH HOẠT KHẨN CẤP TỨC THỜI (< 30ms):
+                # Không chờ AI, gọi thẳng callback để phát tín hiệu an toàn ngay lập tức
+                if is_emer and self._emergency_callback:
+                    now = time.time()
+                    if now - self._last_emergency_cb_time >= 0.15:
+                        self._last_emergency_cb_time = now
+                        try:
+                            self._emergency_callback(median_val)
+                        except Exception as e:
+                            logger.error(f"[DISTANCE SENSOR] Lỗi gọi emergency callback: {e}")
+
+            elapsed = time.perf_counter() - t0
+            sleep_time = max(0.001, self.poll_interval - elapsed)
             time.sleep(sleep_time)
 
     def start(self):
-        """Khởi động luồng đọc nền."""
         if not self._running:
             self._running = True
-            self._thread = threading.Thread(target=self._poll_loop, name="HCSR04-Worker", daemon=True)
+            self._thread = threading.Thread(target=self._poll_loop, name="Sensor-Thread", daemon=True)
             self._thread.start()
-            logger.info("[HC-SR04] Đã khởi động luồng đọc siêu âm liên tục.")
 
     def stop(self):
-        """Dừng luồng đọc cảm biến và giải phóng GPIO."""
         self._running = False
         if self._thread and self._thread.is_alive():
-            self._thread.join(timeout=1.0)
+            self._thread.join(timeout=0.5)
         if HAS_RPI_GPIO and not self._is_simulated:
             try:
                 GPIO.cleanup([self.trig_pin, self.echo_pin])
             except Exception:
                 pass
-        logger.info("[HC-SR04] Đã dừng cảm biến siêu âm.")
 
     def get_latest_reading(self) -> Tuple[float, float, bool]:
-        """
-        Lấy thông tin đo mới nhất:
-        Returns:
-            (distance_m, timestamp, is_emergency)
-        """
+        """Lấy giá trị đo mới nhất: (distance_m, timestamp, is_emergency)"""
         with self._lock:
             return self._latest_distance_m, self._latest_timestamp, self._is_emergency
 
-    def set_simulated_distance(self, distance_m: float):
-        """Dùng cho thử nghiệm / Unit test mô phỏng kịch bản."""
+    @property
+    def is_simulated(self) -> bool:
+        return self._is_simulated
+
+    def set_simulated_distance(self, distance_m: float, manual: bool = True):
+        if manual:
+            self.is_manually_overridden = True
         self._simulated_distance = distance_m
+        is_emer = (distance_m < self.emergency_distance_m)
         with self._lock:
+            self._history.clear()
+            self._history.append(distance_m)
             self._latest_distance_m = distance_m
             self._latest_timestamp = time.time()
-            self._is_emergency = (distance_m < self.emergency_distance_m)
+            self._is_emergency = is_emer
+
+        if is_emer and self._emergency_callback:
+            now = time.time()
+            if now - self._last_emergency_cb_time >= 0.1:
+                self._last_emergency_cb_time = now
+                try:
+                    self._emergency_callback(distance_m)
+                except Exception:
+                    pass
