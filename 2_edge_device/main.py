@@ -161,27 +161,43 @@ def main():
     sensor.start()
     audio.set_distance_callback(sensor.set_simulated_distance)
 
-    # 4. Khởi tạo Nguồn Video
+    # 4. Khởi tạo Nguồn Video (Tự động quét các cổng 0, 1, 2, 3...)
     cap = None
     synth_cam = None
     use_synthetic = (args.source.lower() in ["demo", "synthetic"])
 
     if not use_synthetic and HAS_CV2:
-        cam_id = int(args.source) if (args.source.isdigit() and args.source != "auto") else 0
-        cap = cv2.VideoCapture(cam_id)
-        if not (cap and cap.isOpened()):
-            print("[CAMERA] Không mở được webcam vật lý -> Chuyển sang Camera Mô Phỏng 3D.")
+        cam_indices = [int(args.source)] if args.source.isdigit() else [0, 1, 2, 3, 4]
+        for c_idx in cam_indices:
+            try:
+                backend = cv2.CAP_V4L2 if hasattr(cv2, 'CAP_V4L2') else cv2.CAP_ANY
+                c_test = cv2.VideoCapture(c_idx, backend)
+                if c_test.isOpened():
+                    c_test.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+                    c_test.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+                    ret_check, test_f = c_test.read()
+                    if ret_check and test_f is not None:
+                        cap = c_test
+                        print(f"[CAMERA] ✅ Mở thành công Camera vật lý tại cổng index: {c_idx}")
+                        break
+                    c_test.release()
+            except Exception:
+                pass
+
+        if cap is None:
+            print("[CAMERA] ⚠️ Không tìm thấy camera vật lý hoạt động -> Tự động chuyển sang Camera Mô Phỏng 3D.")
             use_synthetic = True
             synth_cam = SyntheticCamera()
     else:
         use_synthetic = True
         synth_cam = SyntheticCamera()
 
-    print(f"\n👉 Mở trình duyệt xem trực tiếp: http://localhost:{args.port}")
+    print(f"\n👉 Mở trình duyệt xem trực tiếp: http://localhost:{audio.port}")
     print("👉 Phím test cự ly: [1] 3.0m (An toàn)  [2] 2.0m (Dẫn hướng)  [3] 0.5m (Khẩn cấp)  [Q] Thoát\n")
 
     fps = 0.0
-    debug_view = (not args.headless) and HAS_CV2
+    has_display = bool(os.environ.get("DISPLAY")) or (sys.platform == "darwin")
+    debug_view = (not args.headless) and HAS_CV2 and has_display
 
     try:
         while True:

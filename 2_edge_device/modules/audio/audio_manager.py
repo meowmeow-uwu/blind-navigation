@@ -318,16 +318,25 @@ class AudioManager:
         self._worker_thread = threading.Thread(target=self._speech_worker, daemon=True)
         self._worker_thread.start()
 
-        # Khởi chạy HTTP Server
+        # Khởi chạy HTTP Server (Tự động chuyển port nếu 8080 đang bận)
         VoiceRequestHandler.manager_instance = self
-        try:
-            self.server = ReusableHTTPServer(('0.0.0.0', self.port), VoiceRequestHandler)
-            self.server_thread = threading.Thread(target=self.server.serve_forever, daemon=True)
-            self.server_thread.start()
-            print(f"[AUDIO MANAGER] Web Server & Audio Dashboard tại http://localhost:{self.port}")
-        except Exception as e:
-            print(f"[AUDIO MANAGER] Cảnh báo cổng {self.port}: {e}")
-            self.server = None
+        self.server = None
+        for p in [self.port, self.port + 1, self.port + 2, 8888]:
+            try:
+                self.server = ReusableHTTPServer(('0.0.0.0', p), VoiceRequestHandler)
+                self.port = p
+                self.server_thread = threading.Thread(target=self.server.serve_forever, daemon=True)
+                self.server_thread.start()
+                print(f"[AUDIO MANAGER] Web Server & Audio Dashboard tại http://localhost:{self.port}")
+                break
+            except OSError as e:
+                if e.errno == 98 or "already in use" in str(e).lower():
+                    continue
+                else:
+                    break
+
+        if self.server is None:
+            print(f"[AUDIO MANAGER] ⚠️ Không thể mở Web Server trên cổng {self.port}. Vui lòng giải phóng port bằng: fuser -k {self.port}/tcp")
 
     def set_distance_callback(self, cb):
         self.dist_callback = cb
