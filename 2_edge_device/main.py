@@ -111,7 +111,8 @@ def draw_hud(frame: np.ndarray, fused_results: list, us_dist: float, is_emergenc
     # 4. Thanh Header trạng thái
     hdr_color = (0, 0, 160) if is_emergency else (30, 30, 30)
     cv2.rectangle(vis, (0, 0), (w, 30), hdr_color, -1)
-    status_msg = f"PBL6 NAV | FPS: {fps:.1f} | SIEU AM: {us_dist:.2f}m"
+    us_str = f"{us_dist:.2f}m" if us_dist is not None else "--"
+    status_msg = f"PBL6 NAV | FPS: {fps:.1f} | SIEU AM: {us_str}"
     if is_emergency:
         status_msg += " | [!] KHAN CAP: DUNG LAI (BEEP)"
     cv2.putText(vis, status_msg, (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.48, (255, 255, 255), 1)
@@ -233,11 +234,11 @@ def main():
                 audio.trigger_emergency(raw_d or 0.8)
             else:
                 audio.clear_emergency()
-                # Nếu có vật cản và nằm trong khoảng dẫn hướng (1.5m - 3.0m)
+                # Nếu có vật cản và nằm trong khoảng dẫn hướng (1.0m - 3.0m)
                 if fused_results:
                     top = fused_results[0]
                     # Chỉ thông báo 1-2 từ khoá và ĐÚNG 1 LẦN duy nhất theo Track ID (Yêu cầu 3 & 5)
-                    if 1.5 <= top.distance_m <= 3.0 and top.track_id != -1:
+                    if 1.0 <= top.distance_m <= 3.0 and top.track_id != -1:
                         for trk in tracker.tracks:
                             if trk.track_id == top.track_id and not trk.announced:
                                 spoken = audio.announce_guidance(top.track_id, top.class_name, top.lane, top.distance_m)

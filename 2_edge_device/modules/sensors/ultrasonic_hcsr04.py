@@ -52,7 +52,7 @@ class HCSR04Sensor:
         self._lock = threading.Lock()
 
         # Dữ liệu đo mới nhất
-        self._latest_distance_m: float = 2.5
+        self._latest_distance_m: Optional[float] = 2.5 if (not HAS_RPI_GPIO) else None
         self._latest_timestamp: float = time.time()
         self._history = deque(maxlen=filter_window)
         self._is_emergency: bool = False
@@ -175,9 +175,12 @@ class HCSR04Sensor:
             except Exception:
                 pass
 
-    def get_latest_reading(self) -> Tuple[float, float, bool]:
+    def get_latest_reading(self) -> Tuple[Optional[float], float, bool]:
         """Lấy giá trị đo mới nhất: (distance_m, timestamp, is_emergency)"""
         with self._lock:
+            # Nếu cảm biến thật nhưng quá 1.0 giây không nhận được xung -> mất kết nối / out of range
+            if not self._is_simulated and (time.time() - self._latest_timestamp > 1.0):
+                return None, self._latest_timestamp, False
             return self._latest_distance_m, self._latest_timestamp, self._is_emergency
 
     @property

@@ -31,6 +31,7 @@ import json
 from typing import Optional, Dict, Set
 from urllib.parse import urlparse, parse_qs
 from http.server import HTTPServer, SimpleHTTPRequestHandler
+from socketserver import ThreadingMixIn
 
 IS_MAC = platform.system() == "Darwin"
 
@@ -134,6 +135,14 @@ HTML_PAGE = """<!DOCTYPE html>
         let nextBeepTime = 0;
         let beepInterval = 0;
         let isEmergency = false;
+        let activeUtterance = null;
+
+        // Tải trước danh sách giọng nói tiếng Việt
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.onvoiceschanged = () => {
+                window.speechSynthesis.getVoices();
+            };
+        }
 
         function initAudio() {
             if (!audioCtx) {
@@ -162,12 +171,22 @@ HTML_PAGE = """<!DOCTYPE html>
 
         function speakGuidance(text) {
             if (!audioEnabled || !('speechSynthesis' in window)) return;
-            if (window.speechSynthesis.speaking) return; // Chống đè tiếng
-            window.speechSynthesis.cancel();
-            const u = new SpeechSynthesisUtterance(text);
-            u.lang = 'vi-VN';
-            u.rate = 1.1;
-            window.speechSynthesis.speak(u);
+            try {
+                window.speechSynthesis.cancel();
+                const u = new SpeechSynthesisUtterance(text);
+                const voices = window.speechSynthesis.getVoices();
+                const viVoice = voices.find(v => (v.lang && (v.lang.startsWith('vi') || v.lang.includes('VIE'))));
+                if (viVoice) {
+                    u.voice = viVoice;
+                }
+                u.lang = 'vi-VN';
+                u.rate = 1.05;
+                // Giữ reference toàn cục tránh Garbage Collector giải phóng sớm trên Chrome
+                activeUtterance = u;
+                u.onend = () => { activeUtterance = null; };
+                u.onerror = () => { activeUtterance = null; };
+                window.speechSynthesis.speak(u);
+            } catch(e) {}
         }
 
         function toggleAudio() {
@@ -178,6 +197,7 @@ HTML_PAGE = """<!DOCTYPE html>
                 btn.innerText = "🔇 TẮT ÂM THANH TRÌNH DUYỆT";
                 btn.className = "btn-audio active";
                 playWebBeep(1000, 0.1);
+                speakGuidance("Âm thanh đã bật");
             } else {
                 btn.innerText = "🔊 BẬT ÂM THANH TRÌNH DUYỆT";
                 btn.className = "btn-audio";
@@ -198,16 +218,17 @@ HTML_PAGE = """<!DOCTYPE html>
             }
         }, 30);
 
-        // Polling trạng thái cảnh báo từ Server
+        // Polling trạng thái cảnh báo từ Server (Không nghẽn luồng video)
         setInterval(async () => {
             try {
-                const res = await fetch('/alert');
+                const res = await fetch('/alert?t=' + Date.now());
+                if (!res.ok) return;
                 const data = await res.json();
                 const box = document.getElementById('status-box');
 
                 if (data.mode === 'emergency') {
                     isEmergency = true;
-                    beepInterval = data.interval || 0.3;
+                    beepInterval = data.interval || 0.25;
                     box.innerText = "🚨 " + data.text + " (" + data.distance + "m)";
                     box.className = "emergency-banner";
                 } else {
@@ -247,9 +268,11 @@ class VoiceRequestHandler(SimpleHTTPRequestHandler):
         elif parsed.path == '/alert':
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
+            self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+            self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
             payload = self.manager_instance.get_alert_state()
-            self.wfile.write(json.dumps(payload).encode('utf-8'))
+            self.wfile.write(json.dumps(payload, ensure_ascii=False).encode('utf-8'))
         elif parsed.path == '/set_dist':
             query = parse_qs(parsed.query)
             if 'val' in query and self.manager_instance.dist_callback:
@@ -259,26 +282,36 @@ class VoiceRequestHandler(SimpleHTTPRequestHandler):
                 except ValueError:
                     pass
             self.send_response(200)
+            self.send_header('Content-type', 'text/plain')
+            self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
             self.wfile.write(b'OK')
         elif parsed.path == '/video_feed':
             self.send_response(200)
             self.send_header('Content-type', 'multipart/x-mixed-replace; boundary=frame')
+            self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+            self.send_header('Pragma', 'no-cache')
+            self.send_header('Expires', '0')
+            self.send_header('Connection', 'close')
             self.end_headers()
             try:
+                last_frame = None
                 while getattr(self.manager_instance, 'is_running', True):
                     jpeg_bytes = self.manager_instance.get_jpeg_frame()
-                    if jpeg_bytes is not None:
+                    if jpeg_bytes is not None and jpeg_bytes != last_frame:
                         self.wfile.write(b'--frame\r\n'
                                          b'Content-Type: image/jpeg\r\n\r\n' + jpeg_bytes + b'\r\n')
-                    time.sleep(0.04)  # ~25 FPS
-            except (BrokenPipeError, ConnectionResetError):
+                        last_frame = jpeg_bytes
+                    time.sleep(0.033)  # ~30 FPS
+            except (BrokenPipeError, ConnectionResetError, Exception):
                 pass
         else:
             self.send_error(404)
 
 
-class ReusableHTTPServer(HTTPServer):
+class ReusableThreadingHTTPServer(ThreadingMixIn, HTTPServer):
+    """Máy chủ HTTP đa luồng (Multi-threaded) chống nghẽn luồng video feed."""
+    daemon_threads = True
     allow_reuse_address = True
 
 
@@ -323,7 +356,7 @@ class AudioManager:
         self.server = None
         for p in [self.port, self.port + 1, self.port + 2, 8888]:
             try:
-                self.server = ReusableHTTPServer(('0.0.0.0', p), VoiceRequestHandler)
+                self.server = ReusableThreadingHTTPServer(('0.0.0.0', p), VoiceRequestHandler)
                 self.port = p
                 self.server_thread = threading.Thread(target=self.server.serve_forever, daemon=True)
                 self.server_thread.start()

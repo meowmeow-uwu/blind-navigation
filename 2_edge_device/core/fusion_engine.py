@@ -242,57 +242,63 @@ class SensorFusionEngine:
 
         # 3. Gắn kết khoảng cách siêu âm cho vật trong chùm sóng nón (Yêu cầu 2)
         # Sóng âm HC-SR04 phản xạ từ bề mặt gần nhất -> gán echo cho vật có d_cam gần nhất trong chùm
-        if len(tracks_in_beam) > 0 and raw_us_distance is not None:
-            tracks_in_beam.sort(key=lambda item: item[1])
+        if len(tracks_in_beam) > 0:
+            if raw_us_distance is not None:
+                tracks_in_beam.sort(key=lambda item: item[1])
 
-            closest_track, closest_d_cam, closest_method = tracks_in_beam[0]
-            ratio_diff = abs(raw_us_distance - closest_d_cam) / max(0.1, min(raw_us_distance, closest_d_cam))
+                closest_track, closest_d_cam, closest_method = tracks_in_beam[0]
+                ratio_diff = abs(raw_us_distance - closest_d_cam) / max(0.1, min(raw_us_distance, closest_d_cam))
 
-            if raw_us_distance > closest_d_cam * (1.0 + self.match_ratio):
-                # Tình huống 2: Cảm biến báo xa hơn camera nhiều (tiêu âm, phản xạ trượt) -> Phạt siêu âm
-                closest_track.kalman_dist.update_ultrasonic(raw_us_distance, variance_override=self.r_us_penalized)
-                if closest_track.kalman_dist.distance > closest_d_cam:
-                    closest_track.kalman_dist.x[0, 0] = closest_d_cam
-                source_status = "us_penalized"
-            elif ratio_diff <= self.match_ratio:
-                # Tình huống 1: Hai nguồn khớp -> Cập nhật siêu âm chuẩn và tự học thang đo scale s
-                closest_track.kalman_dist.update_ultrasonic(raw_us_distance)
-                self.scale_calibrator.update(raw_us_distance, closest_d_cam, closest_track.age)
-                source_status = "two_sources_matched"
+                if raw_us_distance > closest_d_cam * (1.0 + self.match_ratio):
+                    # Tình huống 2: Cảm biến báo xa hơn camera nhiều (tiêu âm, phản xạ trượt) -> Phạt siêu âm
+                    closest_track.kalman_dist.update_ultrasonic(raw_us_distance, variance_override=self.r_us_penalized)
+                    if closest_track.kalman_dist.distance > closest_d_cam:
+                        closest_track.kalman_dist.x[0, 0] = closest_d_cam
+                    source_status = "us_penalized"
+                elif ratio_diff <= self.match_ratio:
+                    # Tình huống 1: Hai nguồn khớp -> Cập nhật siêu âm chuẩn và tự học thang đo scale s
+                    closest_track.kalman_dist.update_ultrasonic(raw_us_distance)
+                    self.scale_calibrator.update(raw_us_distance, closest_d_cam, closest_track.age)
+                    source_status = "two_sources_matched"
+                else:
+                    # Siêu âm gần hơn camera một chút: Cập nhật siêu âm đảm bảo an toàn
+                    closest_track.kalman_dist.update_ultrasonic(raw_us_distance, enforce_gating=False)
+                    closest_track.kalman_dist.x[0, 0] = raw_us_distance
+                    source_status = "two_sources_matched"
+
+                d_final = closest_track.kalman_dist.distance
+                ttc = closest_track.kalman_dist.get_ttc()
+                v_dot = closest_track.kalman_dist.velocity
+                risk = self.compute_risk_score(d_final, ttc, closest_track.bbox, closest_track.class_name)
+                is_emer = (d_final < self.emergency_distance_m) or (ttc < 1.5 and d_final < 1.5)
+                if is_emer:
+                    global_emergency = True
+
+                fused_results.append(FusedObstacleResult(
+                    track_id=closest_track.track_id,
+                    class_name=closest_track.class_name,
+                    confidence=closest_track.confidence,
+                    bbox=closest_track.bbox,
+                    distance_m=round(d_final, 2),
+                    velocity_mps=round(v_dot, 2),
+                    closing_speed_mps=round(-v_dot, 2),
+                    ttc_seconds=round(ttc, 1),
+                    lane=closest_track.lane,
+                    risk_score=risk,
+                    is_emergency=is_emer,
+                    source_status=source_status,
+                    estimation_method=closest_method,
+                    is_ultrasonic_target=True,
+                    is_laser_target=True
+                ))
+
+                remaining_tracks = tracks_in_beam[1:]
             else:
-                # Siêu âm gần hơn camera một chút: Cập nhật siêu âm đảm bảo an toàn
-                closest_track.kalman_dist.update_ultrasonic(raw_us_distance, enforce_gating=False)
-                closest_track.kalman_dist.x[0, 0] = raw_us_distance
-                source_status = "two_sources_matched"
+                # Không có cảm biến siêu âm cắm vào: Toàn bộ vật trong chùm ngắm dùng camera_scaled
+                remaining_tracks = tracks_in_beam
 
-            d_final = closest_track.kalman_dist.distance
-            ttc = closest_track.kalman_dist.get_ttc()
-            v_dot = closest_track.kalman_dist.velocity
-            risk = self.compute_risk_score(d_final, ttc, closest_track.bbox, closest_track.class_name)
-            is_emer = (d_final < self.emergency_distance_m) or (ttc < 1.5 and d_final < 1.5)
-            if is_emer:
-                global_emergency = True
-
-            fused_results.append(FusedObstacleResult(
-                track_id=closest_track.track_id,
-                class_name=closest_track.class_name,
-                confidence=closest_track.confidence,
-                bbox=closest_track.bbox,
-                distance_m=round(d_final, 2),
-                velocity_mps=round(v_dot, 2),
-                closing_speed_mps=round(-v_dot, 2),
-                ttc_seconds=round(ttc, 1),
-                lane=closest_track.lane,
-                risk_score=risk,
-                is_emergency=is_emer,
-                source_status=source_status,
-                estimation_method=closest_method,
-                is_ultrasonic_target=True,
-                is_laser_target=True
-            ))
-
-            # Các vật còn lại trong chùm sóng nón: dùng khoảng cách camera đã được chuẩn hóa bởi scale s
-            for other_track, other_d_cam, other_method in tracks_in_beam[1:]:
+            # Các vật còn lại trong chùm sóng nón (hoặc toàn bộ nếu siêu âm ngắt)
+            for other_track, other_d_cam, other_method in remaining_tracks:
                 d_final = other_track.kalman_dist.distance
                 ttc = other_track.kalman_dist.get_ttc()
                 v_dot = other_track.kalman_dist.velocity
