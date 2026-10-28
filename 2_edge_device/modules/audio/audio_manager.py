@@ -287,9 +287,10 @@ class AudioManager:
     Quản lý phản hồi thích ứng đa giác quan & chống chồng chéo âm thanh (Zero Audio Overlap).
     """
 
-    def __init__(self, port: int = 8080, guidance_cooldown_s: float = 2.5):
+    def __init__(self, port: int = 8080, guidance_cooldown_s: float = 2.5, enable_local_audio: bool = True):
         self.port = port
         self.guidance_cooldown_s = guidance_cooldown_s
+        self.enable_local_audio = enable_local_audio
 
         # Quản lý vòng đời âm thanh và trạng thái khẩn cấp
         self.is_emergency = False
@@ -428,6 +429,9 @@ class AudioManager:
 
     def _play_local_beep(self):
         """Phát 1 tiếng bíp cục bộ trên máy tính/Raspberry Pi."""
+        if not self.enable_local_audio:
+            return
+
         def _worker():
             try:
                 if IS_MAC and os.path.exists(BEEP_WAV_PATH):
@@ -463,8 +467,8 @@ class AudioManager:
             except queue.Empty:
                 continue
 
-            if self.is_emergency:
-                continue  # Bỏ qua nếu đang khẩn cấp
+            if not self.enable_local_audio or self.is_emergency:
+                continue  # Bỏ qua nếu tắt loa cục bộ hoặc đang khẩn cấp
 
             with self._proc_lock:
                 try:

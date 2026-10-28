@@ -18,10 +18,19 @@ print("=" * 60)
 
 # 1. KIỂM TRA ÂM THANH
 print("\n[1/3] Kiểm tra Âm thanh (Loa / Tai nghe)...")
+# Tự động kích hoạt âm lượng ALSA (Unmute và tăng 90%)
+for ctrl in ["Headphone", "Master", "PCM"]:
+    try:
+        subprocess.run(["amixer", "sset", ctrl, "90%", "unmute"],
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+    except Exception:
+        pass
+
 if shutil.which("espeak-ng"):
-    print("  -> Đang phát thử giọng nói qua espeak-ng...")
-    subprocess.run(["espeak-ng", "-v", "vi", "-s", "160", "Kiểm tra loa thành công"], check=False)
-    print("  ✅ espeak-ng hoạt động tốt.")
+    print("  -> Đang phát thử giọng nói tiếng Việt qua espeak-ng...")
+    subprocess.run(["espeak-ng", "-v", "vi", "-s", "160", "Kiểm tra loa thành công. Hệ thống sẵn sàng."], check=False)
+    print("  ✅ Đã gửi lệnh phát âm thanh tới loa.")
+    print("  💡 Nếu không nghe thấy tiếng, chạy lệnh riêng: python experiments/test_speaker.py --sweep")
 else:
     print("  ⚠️ Chưa cài đặt espeak-ng. Chạy: sudo apt install -y espeak-ng")
 
@@ -47,6 +56,7 @@ except Exception as e:
 print("\n[3/3] Kiểm tra Cảm biến siêu âm HC-SR04 (GPIO 23 TRIG, GPIO 24 ECHO)...")
 try:
     import RPi.GPIO as GPIO
+    GPIO.setwarnings(False)
     TRIG = 23
     ECHO = 24
     GPIO.setmode(GPIO.BCM)
@@ -56,31 +66,48 @@ try:
     time.sleep(0.1)
 
     print("  Đang đo thử 3 lần:")
+    success_count = 0
     for i in range(1, 4):
+        GPIO.output(TRIG, GPIO.LOW)
+        time.sleep(0.000002)
         GPIO.output(TRIG, GPIO.HIGH)
-        time.sleep(0.00001)
+        time.sleep(0.000010)
         GPIO.output(TRIG, GPIO.LOW)
 
-        start_t = time.time()
-        timeout = start_t + 0.04
+        t_now = time.perf_counter()
+        timeout = t_now + 0.035
+
+        pulse_start = time.perf_counter()
         while GPIO.input(ECHO) == GPIO.LOW:
-            start_t = time.time()
-            if start_t > timeout:
+            pulse_start = time.perf_counter()
+            if pulse_start > timeout:
                 break
 
-        stop_t = time.time()
+        pulse_end = pulse_start
+        timeout_end = pulse_start + 0.035
         while GPIO.input(ECHO) == GPIO.HIGH:
-            stop_t = time.time()
-            if stop_t > timeout:
+            pulse_end = time.perf_counter()
+            if pulse_end > timeout_end:
                 break
 
-        duration = stop_t - start_t
-        distance_cm = (duration * 34300) / 2
-        print(f"    Lần {i}: {distance_cm:.1f} cm ({distance_cm/100:.2f} m)")
-        time.sleep(0.3)
+        if pulse_start <= timeout and pulse_end > pulse_start:
+            duration = pulse_end - pulse_start
+            distance_cm = (duration * 34300) / 2
+            if 2.0 <= distance_cm <= 400.0:
+                print(f"    Lần {i}: {distance_cm:6.1f} cm ({distance_cm/100:.2f} m)")
+                success_count += 1
+            else:
+                print(f"    Lần {i}: Ngoài phạm vi ({distance_cm:.1f} cm)")
+        else:
+            print(f"    Lần {i}: ⚠️ Không nhận được xung Echo (Cảm biến chưa cắm hoặc lỏng dây)")
+
+        time.sleep(0.25)
 
     GPIO.cleanup([TRIG, ECHO])
-    print("  ✅ Cảm biến HC-SR04 đọc xung thành công!")
+    if success_count > 0:
+        print("  ✅ Cảm biến HC-SR04 đọc xung thành công!")
+    else:
+        print("  ⚠️ Chưa nhận được tín hiệu HC-SR04. Vui lòng cắm cảm biến và kiểm tra dây nối.")
 except ImportError:
     print("  ⚠️ RPi.GPIO chưa được cài đặt. Chạy: pip install RPi.GPIO")
 except Exception as e:

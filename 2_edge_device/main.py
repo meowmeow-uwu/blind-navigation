@@ -124,11 +124,17 @@ def main():
     parser.add_argument("--source", type=str, default="auto", help="Nguồn video: 'auto', 'demo', 0, hoặc đường dẫn mp4")
     parser.add_argument("--port", type=int, default=8080, help="Cổng Web Dashboard & Audio (mặc định: 8080)")
     parser.add_argument("--headless", action="store_true", help="Chạy không cửa sổ GUI màn hình")
+    parser.add_argument("--mute-local", action="store_true",
+                        help="Tắt loa cục bộ trên Pi, chỉ phát âm thanh qua Web Dashboard trên máy tính Mac")
     args = parser.parse_args()
 
     print("=" * 68)
     print("   HỆ THỐNG ĐIỀU HƯỚNG KHIẾM THỊ THÔNG MINH (PBL6 EDGE-AI)")
     print("   Cảm biến siêu âm HC-SR04 (30-50Hz) + Camera YOLOv8 NCNN")
+    if args.mute_local:
+        print("   📢 Chế độ âm thanh: Phát qua Web Dashboard (Loa máy Mac/Điện thoại)")
+    else:
+        print("   📢 Chế độ âm thanh: Phát đồng thời Loa ngoài thiết bị & Web Dashboard")
     print("=" * 68)
 
     config = load_config()
@@ -140,7 +146,7 @@ def main():
     fusion_engine = SensorFusionEngine(config)
 
     # 2. Khởi tạo Audio Manager (Chống đè tiếng & Phân tầng phản hồi - Yêu cầu 5)
-    audio = AudioManager(port=args.port, guidance_cooldown_s=2.5)
+    audio = AudioManager(port=args.port, guidance_cooldown_s=2.5, enable_local_audio=not args.mute_local)
 
     # 3. Khởi tạo Cảm biến siêu âm HC-SR04 đa luồng (Yêu cầu 1: Bất đồng bộ 40Hz)
     us_cfg = config.get("ultrasonic", {})
