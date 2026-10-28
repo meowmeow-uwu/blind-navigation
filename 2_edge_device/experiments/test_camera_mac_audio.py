@@ -28,6 +28,7 @@ except ImportError:
 import numpy as np
 from modules.tracking.byte_tracker import LightweightTracker
 from modules.audio.audio_manager import AudioManager
+from modules.vision_local.freshest_camera import FreshestCameraReader
 
 
 def scan_camera(source_arg="auto"):
@@ -108,6 +109,7 @@ def main():
         sys.exit(1)
 
     print(f"  ✅ Đã kết nối thành công Camera tại cổng index: {cam_idx}")
+    fresh_cap = FreshestCameraReader(cap)
 
     # 2. Khởi tạo detector & tracker
     print("\n[2/3] Khởi tạo AI Detector & Audio Manager...")
@@ -129,7 +131,7 @@ def main():
     try:
         while True:
             t0 = time.perf_counter()
-            ret, frame = cap.read()
+            ret, frame = fresh_cap.read()
             if not ret or frame is None:
                 time.sleep(0.01)
                 continue
@@ -175,7 +177,7 @@ def main():
     except KeyboardInterrupt:
         print("\n[INFO] Đang dừng...")
     finally:
-        cap.release()
+        fresh_cap.release()
         audio.stop()
         print("[DONE] Đã giải phóng toàn bộ tài nguyên.")
 

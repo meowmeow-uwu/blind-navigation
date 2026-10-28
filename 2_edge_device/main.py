@@ -33,6 +33,7 @@ from modules.tracking.byte_tracker import LightweightTracker
 from core.fusion_engine import SensorFusionEngine
 from modules.audio.audio_manager import AudioManager
 from modules.vision_local.synthetic_camera import SyntheticCamera
+from modules.vision_local.freshest_camera import FreshestCameraReader
 
 LABEL_DISPLAY = {
     "person": "NGUOI", "chair": "GHE", "dining table": "BAN",
@@ -164,6 +165,7 @@ def main():
 
     # 4. Khởi tạo Nguồn Video (Tự động quét các cổng 0, 1, 2, 3...)
     cap = None
+    fresh_cap = None
     synth_cam = None
     use_synthetic = (args.source.lower() in ["demo", "synthetic"])
 
@@ -179,7 +181,8 @@ def main():
                     ret_check, test_f = c_test.read()
                     if ret_check and test_f is not None:
                         cap = c_test
-                        print(f"[CAMERA] ✅ Mở thành công Camera vật lý tại cổng index: {c_idx}")
+                        fresh_cap = FreshestCameraReader(cap)
+                        print(f"[CAMERA] ✅ Mở thành công Camera vật lý tại cổng index: {c_idx} (Độ trễ tối thiểu)")
                         break
                     c_test.release()
             except Exception:
@@ -204,16 +207,15 @@ def main():
         while True:
             t_start = time.perf_counter()
 
-            # Lấy khung hình
+            # Lấy khung hình tươi mới nhất (Zero Latency)
             sim_dets = []
             if use_synthetic and synth_cam:
                 _, frame, sim_dets, sim_d = synth_cam.read()
                 if sensor.is_simulated and not sensor.is_manually_overridden:
                     sensor.set_simulated_distance(sim_d, manual=False)
-            elif cap and cap.isOpened():
-                ret, frame = cap.read()
-                if not ret:
-                    cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+            elif fresh_cap and fresh_cap.isOpened():
+                ret, frame = fresh_cap.read()
+                if not ret or frame is None:
                     time.sleep(0.01)
                     continue
             else:
@@ -282,7 +284,9 @@ def main():
         print("\n[INFO] Đang đóng hệ thống an toàn...")
         audio.stop()
         sensor.stop()
-        if cap and cap.isOpened():
+        if fresh_cap:
+            fresh_cap.release()
+        elif cap and cap.isOpened():
             cap.release()
         if HAS_CV2:
             cv2.destroyAllWindows()
