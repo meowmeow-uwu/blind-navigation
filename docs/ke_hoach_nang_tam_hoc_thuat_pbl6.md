@@ -265,3 +265,4 @@ Khi viết báo cáo tốt nghiệp, hãy đưa các nội dung trên vào đún
 * **Chương 3: Phương pháp đề xuất & Thiết kế hệ thống (Proposed Methodology):** Trình bày chi tiết các công thức toán học: Ground-plane IPM, Bộ lọc Kalman Joseph, Thuật toán ByteTrack 2 tầng và Hàm đánh giá nguy cơ va chạm.
 * **Chương 4: Thực nghiệm & Đánh giá kết quả (Experimental Results & Discussion):** Đưa toàn bộ 5 Bảng Benchmark và Ma trận Ablation Study tại Mục 3 và Mục 4 vào. Vẽ biểu đồ so sánh MAE, RMSE, FPS bằng Matplotlib.
 * **Chương 5: Kết luận & Hướng phát triển:** Sử dụng các phần phân tích hạn chế thực nghiệm (IMU 6-DOF, ToF Matrix 64 điểm) để đề xuất hướng nghiên cứu tiếp theo ở bậc Cao học/Thương mại hóa.
+
