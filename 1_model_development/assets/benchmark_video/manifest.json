@@ -1,0 +1,9 @@
+{
+  "file": "walking_scene.mp4",
+  "resolution": "1080x810",
+  "fps": 30,
+  "duration_seconds": 10,
+  "source": "ultralytics_example",
+  "purpose": "offline pipeline benchmark",
+  "notes": "Single test image repeated as video for reproducible benchmarking"
+}

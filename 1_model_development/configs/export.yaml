@@ -1,0 +1,19 @@
+# ONNX Export Configuration for Phase A
+# Used by scripts/export_onnx.py
+
+export:
+  format: onnx
+  imgsz: 320
+  batch: 1
+  dynamic: false
+  simplify: true
+  opset: 12
+  half: false
+  int8: false
+  nms: false
+  device: cpu
+
+validation:
+  confidence_threshold: 0.25
+  nms_iou_threshold: 0.45
+  max_detections: 300
