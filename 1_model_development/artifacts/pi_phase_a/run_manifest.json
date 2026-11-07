@@ -1,0 +1,23 @@
+{
+  "package_name": "pi_phase_a",
+  "description": "Minimal standalone Pi benchmark package",
+  "files_count": 16,
+  "checksums": {
+    "README.md": "10a01acb0b7106737111540d18bef706f414794a76cdb86cab30adf54adf1980",
+    "assets/sample.jpg": "c02019c4979c191eb739ddd944445ef408dad5679acab6fd520ef9d434bfbc63",
+    "configs/benchmark.yaml": "82b39e6d725ec2b0142555e44d0f03cb84bb5e9d8022d85c65f54a16d6004318",
+    "configs/models.yaml": "8849e64e865e4cde32c2b44411e67937760c04d64dcd8207faf863ad0b050b16",
+    "models/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "models/base_detector.py": "2436ec7985140e4f1fc890ecd0e434e8cfdb190ce0668e160161fc9cfdb9cdff",
+    "models/onnx_detector.py": "046376afd8b9fa0da3c8af1f98cd9792852895b5c0fbe0ac53e4d46635033240",
+    "requirements-pi.txt": "c18f34d87a6e746ca1313ec1ef7230f007db7594bbbd2c8d44035eda3f91ea76",
+    "run_phase_a_pi.sh": "13c63ba960f075f1814b50cb606d5b98b657918a99d7312da0c2a9bcf4c8b9d1",
+    "scripts/benchmark_pi.py": "05a79e1b07e5aa22da43bc651f1fb947b74dd0cfce901e9d25a0b976f2ed6b0b",
+    "scripts/collect_environment.py": "906b26b1147f48a604fc1aa9b399d9c5d6d76463d75c04fdd2a6a5765f60d03b",
+    "weights/manifest.json": "277ef4b0d68da9cb8b0e1fcd694c454f4e3a436bb9c2579fbbfbbcd560226a7f",
+    "weights/onnx/yolo11n_320_fp32.onnx": "f2e265d0d0ccd1f64c86b3d77e0ae85517268020a7aa4a8e4881ceeb841236e3",
+    "weights/onnx/yolo12n_320_fp32.onnx": "b9fe632d27ac7f15bae020a2e4cde2088dceab8e154c74e64eae337511857cbd",
+    "weights/onnx/yolo26n_320_fp32.onnx": "ce0da533184b3df3ebcd2c527f7dd3225f0dba0d9664f3788d1a86f0be33d3ef",
+    "weights/onnx/yolov8n_320_fp32.onnx": "b23211ee9efaa3d650054de2f9706482b56ea36c4c3bf914f85c904d68f50b0f"
+  }
+}

@@ -1,0 +1,25 @@
+image,model,backend,gt_class,gt_bbox,pred_class,iou,category
+IMG_19187,yolov8n,onnx,Person,"(97.2, 167.4, 194.4, 653.4)",0,0.219,poor_localization
+IMG_19189,yolov8n,onnx,Car,"(518.4, 442.8, 696.6, 745.2)",5,0.13,poor_localization
+IMG_19190,yolov8n,onnx,Fire hydrant,"(56.699999999999996, 702.0, 137.7, 918.0)",0,0.171,poor_localization
+IMG_19187,yolov8n,pytorch,Person,"(97.2, 167.4, 194.4, 653.4)",0,0.203,poor_localization
+IMG_19189,yolov8n,pytorch,Car,"(518.4, 442.8, 696.6, 745.2)",5,0.131,poor_localization
+IMG_19190,yolov8n,pytorch,Fire hydrant,"(56.699999999999996, 702.0, 137.7, 918.0)",0,0.162,poor_localization
+IMG_19187,yolo11n,onnx,Person,"(97.2, 167.4, 194.4, 653.4)",0,0.212,poor_localization
+IMG_19189,yolo11n,onnx,Car,"(518.4, 442.8, 696.6, 745.2)",5,0.134,poor_localization
+IMG_19190,yolo11n,onnx,Fire hydrant,"(56.699999999999996, 702.0, 137.7, 918.0)",0,0.17,poor_localization
+IMG_19187,yolo11n,pytorch,Person,"(97.2, 167.4, 194.4, 653.4)",0,0.206,poor_localization
+IMG_19189,yolo11n,pytorch,Car,"(518.4, 442.8, 696.6, 745.2)",5,0.128,poor_localization
+IMG_19190,yolo11n,pytorch,Fire hydrant,"(56.699999999999996, 702.0, 137.7, 918.0)",0,0.167,poor_localization
+IMG_19187,yolo12n,onnx,Person,"(97.2, 167.4, 194.4, 653.4)",0,0.216,poor_localization
+IMG_19189,yolo12n,onnx,Car,"(518.4, 442.8, 696.6, 745.2)",5,0.128,poor_localization
+IMG_19190,yolo12n,onnx,Fire hydrant,"(56.699999999999996, 702.0, 137.7, 918.0)",0,0.17,poor_localization
+IMG_19187,yolo12n,pytorch,Person,"(97.2, 167.4, 194.4, 653.4)",0,0.201,poor_localization
+IMG_19189,yolo12n,pytorch,Car,"(518.4, 442.8, 696.6, 745.2)",5,0.13,poor_localization
+IMG_19190,yolo12n,pytorch,Fire hydrant,"(56.699999999999996, 702.0, 137.7, 918.0)",0,0.159,poor_localization
+IMG_19187,yolo26n,onnx,Person,"(97.2, 167.4, 194.4, 653.4)",0,0.218,poor_localization
+IMG_19189,yolo26n,onnx,Car,"(518.4, 442.8, 696.6, 745.2)",5,0.13,poor_localization
+IMG_19190,yolo26n,onnx,Fire hydrant,"(56.699999999999996, 702.0, 137.7, 918.0)",0,0.174,poor_localization
+IMG_19187,yolo26n,pytorch,Person,"(97.2, 167.4, 194.4, 653.4)",0,0.208,poor_localization
+IMG_19189,yolo26n,pytorch,Car,"(518.4, 442.8, 696.6, 745.2)",5,0.129,poor_localization
+IMG_19190,yolo26n,pytorch,Fire hydrant,"(56.699999999999996, 702.0, 137.7, 918.0)",0,0.166,poor_localization

@@ -1,0 +1,9 @@
+model,backend,operational_threshold,iou_threshold,total_images,total_shared_gt,total_predictions,tp,fp,fn,precision,recall,f1,map_50,map_50_95,map_note,dangerous_macro_recall,critical_min_recall,missed_hazard_rate,evaluated_at
+yolov8n,onnx,0.25,0.5,5,4,20,1,19,3,0.05,0.25,0.0833,,,not computed: requires PR curve over confidence sweep (not implemented),0.3333,0.0,0.6667,2026-11-07T15:47:28.191296Z
+yolov8n,pytorch,0.25,0.5,5,4,26,1,25,3,0.0385,0.25,0.0667,,,not computed: requires PR curve over confidence sweep (not implemented),0.3333,0.0,0.6667,2026-11-07T15:47:30.962203Z
+yolo11n,onnx,0.25,0.5,5,4,25,1,24,3,0.04,0.25,0.069,,,not computed: requires PR curve over confidence sweep (not implemented),0.3333,0.0,0.6667,2026-11-07T15:47:31.084379Z
+yolo11n,pytorch,0.25,0.5,5,4,25,1,24,3,0.04,0.25,0.069,,,not computed: requires PR curve over confidence sweep (not implemented),0.3333,0.0,0.6667,2026-11-07T15:47:31.892156Z
+yolo12n,onnx,0.25,0.5,5,4,20,1,19,3,0.05,0.25,0.0833,,,not computed: requires PR curve over confidence sweep (not implemented),0.3333,0.0,0.6667,2026-11-07T15:47:32.025218Z
+yolo12n,pytorch,0.25,0.5,5,4,25,1,24,3,0.04,0.25,0.069,,,not computed: requires PR curve over confidence sweep (not implemented),0.3333,0.0,0.6667,2026-11-07T15:47:33.070980Z
+yolo26n,onnx,0.25,0.5,5,4,25,1,24,3,0.04,0.25,0.069,,,not computed: requires PR curve over confidence sweep (not implemented),0.3333,0.0,0.6667,2026-11-07T15:47:33.173609Z
+yolo26n,pytorch,0.25,0.5,5,4,25,1,24,3,0.04,0.25,0.069,,,not computed: requires PR curve over confidence sweep (not implemented),0.3333,0.0,0.6667,2026-11-07T15:47:34.149427Z

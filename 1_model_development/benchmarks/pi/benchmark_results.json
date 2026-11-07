@@ -1,0 +1,186 @@
+{
+  "yolov8n": {
+    "model": "yolov8n",
+    "status": "valid",
+    "stability_warning": null,
+    "preflight": {
+      "status": "passed",
+      "errors": [],
+      "warnings": [],
+      "platform": "Linux-6.8.0-138-generic-x86_64-with-glibc2.35",
+      "machine": "x86_64",
+      "is_64bit": true,
+      "is_raspberry_pi": false,
+      "cpu_governor": "powersave",
+      "threads_configured": 4,
+      "initial_temperature_c": 27.8,
+      "free_disk_gb": 5.27,
+      "model_sha256": "b23211ee9efaa3d650054de2f9706482b56ea36c4c3bf914f85c904d68f50b0f",
+      "available_providers": [
+        "AzureExecutionProvider",
+        "CPUExecutionProvider"
+      ]
+    },
+    "git_commit": "9cbc9ee5",
+    "repeats": [
+      {
+        "repeat": 1,
+        "status": "valid",
+        "invalid_reasons": [],
+        "measured_runs": 20,
+        "latency": {
+          "mean_ms": 13.594,
+          "p50_ms": 13.383,
+          "p95_ms": 18.045,
+          "p99_ms": 19.4
+        },
+        "environment_sample": {
+          "cpu_util_avg": 53.0,
+          "ram_peak_mb": 149.1,
+          "start_temperature_c": 27.8,
+          "end_temperature_c": 27.8,
+          "throttling_code": null
+        },
+        "raw_csv": "yolov8n_pi_rep1_raw.csv"
+      }
+    ]
+  },
+  "yolo11n": {
+    "model": "yolo11n",
+    "status": "valid",
+    "stability_warning": null,
+    "preflight": {
+      "status": "passed",
+      "errors": [],
+      "warnings": [],
+      "platform": "Linux-6.8.0-138-generic-x86_64-with-glibc2.35",
+      "machine": "x86_64",
+      "is_64bit": true,
+      "is_raspberry_pi": false,
+      "cpu_governor": "powersave",
+      "threads_configured": 4,
+      "initial_temperature_c": 27.8,
+      "free_disk_gb": 5.27,
+      "model_sha256": "f2e265d0d0ccd1f64c86b3d77e0ae85517268020a7aa4a8e4881ceeb841236e3",
+      "available_providers": [
+        "AzureExecutionProvider",
+        "CPUExecutionProvider"
+      ]
+    },
+    "git_commit": "9cbc9ee5",
+    "repeats": [
+      {
+        "repeat": 1,
+        "status": "valid",
+        "invalid_reasons": [],
+        "measured_runs": 20,
+        "latency": {
+          "mean_ms": 12.194,
+          "p50_ms": 11.777,
+          "p95_ms": 13.419,
+          "p99_ms": 13.498
+        },
+        "environment_sample": {
+          "cpu_util_avg": 50.0,
+          "ram_peak_mb": 153.7,
+          "start_temperature_c": 27.8,
+          "end_temperature_c": 27.8,
+          "throttling_code": null
+        },
+        "raw_csv": "yolo11n_pi_rep1_raw.csv"
+      }
+    ]
+  },
+  "yolo12n": {
+    "model": "yolo12n",
+    "status": "valid",
+    "stability_warning": null,
+    "preflight": {
+      "status": "passed",
+      "errors": [],
+      "warnings": [],
+      "platform": "Linux-6.8.0-138-generic-x86_64-with-glibc2.35",
+      "machine": "x86_64",
+      "is_64bit": true,
+      "is_raspberry_pi": false,
+      "cpu_governor": "powersave",
+      "threads_configured": 4,
+      "initial_temperature_c": 27.8,
+      "free_disk_gb": 5.27,
+      "model_sha256": "b9fe632d27ac7f15bae020a2e4cde2088dceab8e154c74e64eae337511857cbd",
+      "available_providers": [
+        "AzureExecutionProvider",
+        "CPUExecutionProvider"
+      ]
+    },
+    "git_commit": "9cbc9ee5",
+    "repeats": [
+      {
+        "repeat": 1,
+        "status": "valid",
+        "invalid_reasons": [],
+        "measured_runs": 20,
+        "latency": {
+          "mean_ms": 13.149,
+          "p50_ms": 13.088,
+          "p95_ms": 13.513,
+          "p99_ms": 13.53
+        },
+        "environment_sample": {
+          "cpu_util_avg": 49.8,
+          "ram_peak_mb": 154.2,
+          "start_temperature_c": 27.8,
+          "end_temperature_c": 27.8,
+          "throttling_code": null
+        },
+        "raw_csv": "yolo12n_pi_rep1_raw.csv"
+      }
+    ]
+  },
+  "yolo26n": {
+    "model": "yolo26n",
+    "status": "valid",
+    "stability_warning": null,
+    "preflight": {
+      "status": "passed",
+      "errors": [],
+      "warnings": [],
+      "platform": "Linux-6.8.0-138-generic-x86_64-with-glibc2.35",
+      "machine": "x86_64",
+      "is_64bit": true,
+      "is_raspberry_pi": false,
+      "cpu_governor": "powersave",
+      "threads_configured": 4,
+      "initial_temperature_c": 27.8,
+      "free_disk_gb": 5.27,
+      "model_sha256": "ce0da533184b3df3ebcd2c527f7dd3225f0dba0d9664f3788d1a86f0be33d3ef",
+      "available_providers": [
+        "AzureExecutionProvider",
+        "CPUExecutionProvider"
+      ]
+    },
+    "git_commit": "9cbc9ee5",
+    "repeats": [
+      {
+        "repeat": 1,
+        "status": "valid",
+        "invalid_reasons": [],
+        "measured_runs": 20,
+        "latency": {
+          "mean_ms": 10.973,
+          "p50_ms": 10.926,
+          "p95_ms": 11.199,
+          "p99_ms": 11.485
+        },
+        "environment_sample": {
+          "cpu_util_avg": 50.0,
+          "ram_peak_mb": 154.4,
+          "start_temperature_c": 27.8,
+          "end_temperature_c": 27.8,
+          "throttling_code": null
+        },
+        "raw_csv": "yolo26n_pi_rep1_raw.csv"
+      }
+    ]
+  }
+}
