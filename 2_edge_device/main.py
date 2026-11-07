@@ -1,175 +1,220 @@
 # 2_edge_device/main.py
-import cv2
-import time
+"""
+Điểm khởi chạy chính cho hệ thống điều hướng người khiếm thị.
+
+Cách dùng:
+    python main.py                          # Webcam, có hiển thị
+    python main.py --source video.mp4       # File video offline
+    python main.py --source 0 --no-display  # Chỉ profile, không hiển thị
+    python main.py --source 0 --no-audio    # Tắt Audio Broker
+    python main.py --source 0 --device cpu  # Ép buộc dùng CPU
+    python main.py --profile                # In profile mỗi 30 frame ra console
+
+Cấu hình được đọc từ configs/default_config.yaml.
+Các tham số CLI sẽ ghi đè giá trị trong file config.
+"""
 import os
 import sys
-import threading
-import RPi.GPIO as GPIO
+import argparse
+import yaml
 
-# Import theo đúng cấu trúc thư mục mới
-from modules.vision_local.yolo_ncnn_runner import YoloNcnnRunner
-from modules.audio.audio_broker import AsyncAudioBroker
-from modules.vision_cloud.vision_cloud_runner import call_qwen_vl_server
+# Đảm bảo chạy được từ bất kỳ thư mục nào
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, BASE_DIR)
 
-# Bảng dịch nhãn COCO sang tiếng Việt
-LABEL_TRANSLATION = {
-    "person": "người",
-    "chair": "ghế",
-    "dining table": "bàn",
-    "bottle": "chai nước",
-    "backpack": "ba lô",
-    "cell phone": "điện thoại",
-    "laptop": "máy tính",
-    "tv": "màn hình"
-}
+from modules.vision_local.yolo_onnx_runner import YoloOnnxRunner
+from modules.vision_local.tracker import ByteTrackerWrapper
+from modules.decision.priority_scorer import PriorityScorer
+from modules.decision.track_state_manager import TrackStateManager
+from modules.utils.profiler import PipelineProfiler
+from modules.utils.stream_loader import StreamLoader
+from pipeline_runner import PipelineRunner
 
-latest_frame = None
-vlm_is_processing = False
-lock = threading.Lock()
 
-def evaluate_lanes(detections, frame_width):
-    lane_width = frame_width / 3.0
-    lane_center_start = lane_width
-    lane_center_end = lane_width * 2.0
-    
-    obstacles_in_left = []
-    obstacles_in_center = []
-    obstacles_in_right = []
-    
-    for det in detections:
-        x1, y1, x2, y2 = det['bbox']
-        cx = (x1 + x2) / 2.0
-        name = LABEL_TRANSLATION.get(det['class_name'], det['class_name'])
-        
-        if cx < lane_center_start:
-            obstacles_in_left.append(name)
-        elif cx <= lane_center_end:
-            obstacles_in_center.append(name)
-        else:
-            obstacles_in_right.append(name)
-            
-    return obstacles_in_left, obstacles_in_center, obstacles_in_right
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="PBL6 Blind Navigation – ONNX + ByteTrack Pipeline",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
+    parser.add_argument(
+        "--source", default=None,
+        help="Nguồn video: 0/1/... (webcam index) hoặc path file video (.mp4, .avi, ...)"
+    )
+    parser.add_argument(
+        "--config", default="configs/default_config.yaml",
+        help="Đường dẫn file cấu hình YAML"
+    )
+    parser.add_argument(
+        "--model", default=None,
+        help="Ghi đè đường dẫn file ONNX trong config"
+    )
+    parser.add_argument(
+        "--conf", type=float, default=None,
+        help="Ghi đè ngưỡng confidence"
+    )
+    parser.add_argument(
+        "--device", choices=["cpu", "cuda"], default=None,
+        help="Ghi đè Execution Provider (cpu | cuda)"
+    )
+    parser.add_argument(
+        "--no-display", action="store_true",
+        help="Chạy không hiển thị cửa sổ OpenCV (headless / SSH)"
+    )
+    parser.add_argument(
+        "--no-audio", action="store_true",
+        help="Tắt Audio Broker (chỉ dùng khi debug)"
+    )
+    parser.add_argument(
+        "--no-lane", action="store_true",
+        help="Tắt overlay phân làn trên màn hình"
+    )
+    parser.add_argument(
+        "--profile", action="store_true",
+        help="In bảng latency chi tiết ra console mỗi 30 frame"
+    )
+    parser.add_argument(
+        "--cooldown", type=float, default=None,
+        help="Ghi đè cooldown cảnh báo (giây)"
+    )
+    return parser.parse_args()
 
-def vlm_assistant_worker(audio_broker):
-    global latest_frame, vlm_is_processing
-    
-    with lock:
-        if latest_frame is None:
-            print("[VLM] Chưa có frame ảnh từ camera để trích xuất.")
-            vlm_is_processing = False
-            return
-        snap_shot = latest_frame.copy()
-        
-    print("[VLM] Đang gửi ảnh lên Cloud VLM...")
-    audio_broker.speak("Đang phân tích không gian xung quanh, vui lòng chờ", cooldown=0.1)
-    
+
+def load_config(path: str) -> dict:
+    full_path = os.path.join(BASE_DIR, path)
+    if not os.path.exists(full_path):
+        print(f"[ERROR] Không tìm thấy file config: {full_path}")
+        sys.exit(1)
+    with open(full_path, "r", encoding="utf-8") as f:
+        return yaml.safe_load(f)
+
+
+def build_on_alert(no_audio: bool, profile_mode: bool):
+    """
+    Xây dựng callback on_alert:
+      - Nếu có AudioBroker: gọi speak().
+      - Nếu no_audio: chỉ in console.
+    """
+    if no_audio:
+        def _console_alert(text: str) -> None:
+            print(f"[ALERT] {text}")
+        return _console_alert, None
+
     try:
-        description = call_qwen_vl_server(snap_shot)
-        print(f"[VLM] Phản hồi: {description}")
-        audio_broker.speak(description, cooldown=0.1)
-    except Exception as e:
-        print(f"[VLM ERROR] {e}")
-        audio_broker.speak("Không thể kết nối đến máy chủ phân tích", cooldown=0.1)
-    finally:
-        vlm_is_processing = False
+        from modules.audio.audio_broker import AsyncAudioBroker
+        broker = AsyncAudioBroker(port=8080)
+        print("[INFO] Audio Broker đang phục vụ trên cổng 8080")
+        print("[INFO] Mở Chrome trên điện thoại: http://<IP_CỦA_MÁY>:8080")
 
-def monitor_sos_button(audio_broker):
-    global vlm_is_processing
-    BUTTON_PIN = 18
-    
-    GPIO.setmode(GPIO.BCM)
-    GPIO.setup(BUTTON_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-    
-    print(f"[INFO] Nút bấm SOS (GPIO {BUTTON_PIN}) đã sẵn sàng.")
-    
-    try:
-        while True:
-            if GPIO.input(BUTTON_PIN) == GPIO.LOW:
-                time.sleep(0.05) # Debounce
-                if GPIO.input(BUTTON_PIN) == GPIO.LOW:
-                    if not vlm_is_processing:
-                        vlm_is_processing = True
-                        print("\n[SOS] Đã nhấn nút SOS! Khởi chạy VLM Cloud...")
-                        vlm_thread = threading.Thread(target=vlm_assistant_worker, args=(audio_broker,), daemon=True)
-                        vlm_thread.start()
-                    else:
-                        print("[INFO] Hệ thống đang phân tích bối cảnh trước đó...")
-                        
-                    while GPIO.input(BUTTON_PIN) == GPIO.LOW:
-                        time.sleep(0.1)
-            time.sleep(0.05)
-    except Exception as e:
-        print(f"[ERROR] Luồng GPIO nút bấm: {e}")
+        def _audio_alert(text: str) -> None:
+            broker.speak(text, cooldown=0.1)
 
-def main():
-    global latest_frame
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    param_path = os.path.join(current_dir, "modules/vision_local/models/yolov8n.param")
-    bin_path = os.path.join(current_dir, "modules/vision_local/models/yolov8n.bin")
-    
-    print("[INFO] Khởi tạo hệ thống Navigation cho Raspberry Pi 4...")
-    detector = YoloNcnnRunner(param_path, bin_path, target_size=320, conf_thresh=0.5, nms_thresh=0.45)
-    audio = AsyncAudioBroker(port=8080)
-    
-    cap = cv2.VideoCapture(0)
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-    
-    if not cap.isOpened():
-        print("[ERROR] Không tìm thấy Camera OV5647")
-        return
-        
-    audio.speak("Hệ thống điều hướng đã sẵn sàng", cooldown=0.1)
-    
-    btn_thread = threading.Thread(target=monitor_sos_button, args=(audio,), daemon=True)
-    btn_thread.start()
-    
-    print("=" * 60)
-    print("[HƯỚNG DẪN] Mở trình duyệt Chrome trên điện thoại Realme:")
-    print("            Truy cập: http://<IP_CỦA_PI>:8080")
-    print("            Bấm nút 'BẬT NHẬN CẢNH BÁO' để phát loa ngoài")
-    print("=" * 60)
-    
-    try:
-        while True:
-            ret, frame = cap.read()
-            if not ret:
-                break
-                
-            with lock:
-                latest_frame = frame.copy()
-                
-            img_h, img_w = frame.shape[:2]
-            detections = detector.detect(frame)
-            
-            # Chỉ phát cảnh báo vật cản nếu VLM Cloud đang không chiếm quyền nói
-            if detections and not vlm_is_processing:
-                left_obs, center_obs, right_obs = evaluate_lanes(detections, img_w)
-                
-                if center_obs:
-                    main_obj = center_obs[0]
-                    if not right_obs:
-                        audio.speak(f"Có {main_obj} phía trước, né sang phải", cooldown=2.5)
-                    elif not left_obs:
-                        audio.speak(f"Có {main_obj} phía trước, né sang trái", cooldown=2.5)
-                    else:
-                        audio.speak(f"Dừng lại, phía trước có {main_obj}", cooldown=1.5)
-                elif left_obs:
-                    audio.speak(f"Có {left_obs[0]} bên trái", cooldown=3.5)
-                elif right_obs:
-                    audio.speak(f"Có {right_obs[0]} bên phải", cooldown=3.5)
-                    
-            time.sleep(0.03)
-            
-    except KeyboardInterrupt:
-        print("\n[INFO] Đang dừng hệ thống...")
-    finally:
-        audio.speak("Đang tắt hệ thống", cooldown=0.1)
-        time.sleep(1.0)
-        audio.stop()
-        cap.release()
-        GPIO.cleanup()
-        print("[DONE] Đã thoát chương trình an toàn.")
+        return _audio_alert, broker
+
+    except Exception as exc:
+        print(f"[WARN] Không thể khởi tạo AudioBroker ({exc}). Chuyển sang console-only.")
+
+        def _fallback_alert(text: str) -> None:
+            print(f"[ALERT] {text}")
+
+        return _fallback_alert, None
+
+
+def main() -> None:
+    args = parse_args()
+    cfg = load_config(args.config)
+
+    # ── Xác định source ────────────────────────────────────────────────────────
+    source_raw = args.source or str(cfg["source"].get("input", 0))
+    source = int(source_raw) if source_raw.isdigit() else source_raw
+
+    # ── Xây dựng đường dẫn model ───────────────────────────────────────────────
+    model_path = os.path.join(
+        BASE_DIR,
+        args.model or cfg["model"]["onnx_path"]
+    )
+    if not os.path.exists(model_path):
+        print(f"[ERROR] Không tìm thấy model ONNX: {model_path}")
+        print("        Chạy: python experiments/export_onnx.py")
+        sys.exit(1)
+
+    # ── Chọn Execution Provider ────────────────────────────────────────────────
+    providers = None
+    if args.device == "cpu":
+        providers = ["CPUExecutionProvider"]
+    elif args.device == "cuda":
+        providers = ["CUDAExecutionProvider", "CPUExecutionProvider"]
+
+    # ── Khởi tạo tất cả module ────────────────────────────────────────────────
+    print("[INIT] Khởi tạo YOLOv8 ONNX Detector...")
+    detector = YoloOnnxRunner(
+        model_path=model_path,
+        target_size=cfg["model"]["target_size"],
+        conf_thresh=args.conf or cfg["model"]["conf_threshold"],
+        nms_thresh=cfg["model"]["nms_threshold"],
+        num_threads=cfg["model"].get("num_threads", 4),
+        providers=providers
+    )
+
+    print("[INIT] Khởi tạo ByteTrack Tracker...")
+    tracker = ByteTrackerWrapper(
+        track_thresh=cfg["tracker"]["track_threshold"],
+        track_buffer=cfg["tracker"]["track_buffer"],
+        match_thresh=cfg["tracker"]["match_threshold"]
+    )
+
+    weights_path = os.path.join(BASE_DIR, "configs/class_weights.yaml")
+    pcfg = cfg["policy"]
+    w = pcfg["weights"]
+
+    print("[INIT] Khởi tạo Decision Policy...")
+    scorer = PriorityScorer(
+        class_weights_path=weights_path,
+        w_class=w["w_class"],
+        w_position=w["w_position"],
+        w_size=w["w_size"]
+    )
+    state_mgr = TrackStateManager(
+        cooldown_seconds=args.cooldown or pcfg["cooldown_seconds"],
+        re_alert_delta=pcfg["re_alert_delta_priority"]
+    )
+
+    print(f"[INIT] Mở nguồn video: {source!r}")
+    stream = StreamLoader(
+        source=source,
+        width=cfg["source"].get("width", 640),
+        height=cfg["source"].get("height", 480),
+        fps_sync=True
+    )
+    stream.open()
+    meta = stream.meta
+    print(f"[INIT] Stream meta: {meta.get('width')}x{meta.get('height')} "
+          f"@ {meta.get('fps', 0):.1f} FPS")
+
+    profiler = PipelineProfiler(buffer_size=30)
+
+    # ── Audio callback ─────────────────────────────────────────────────────────
+    on_alert_cb, audio_broker = build_on_alert(args.no_audio, args.profile)
+
+    # ── Chạy pipeline ──────────────────────────────────────────────────────────
+    print("\n[INFO] Pipeline sẵn sàng. Nhấn 'q' để thoát.\n" + "=" * 40)
+
+    runner = PipelineRunner(
+        detector=detector,
+        tracker=tracker,
+        scorer=scorer,
+        state_mgr=state_mgr,
+        stream=stream,
+        profiler=profiler,
+        on_alert=on_alert_cb,
+        show_display=not args.no_display,
+        show_lane=not args.no_lane,
+    )
+    runner.run()
+
+    # ── Dọn dẹp Audio Broker ──────────────────────────────────────────────────
+    if audio_broker is not None:
+        audio_broker.stop()
+
 
 if __name__ == "__main__":
     main()

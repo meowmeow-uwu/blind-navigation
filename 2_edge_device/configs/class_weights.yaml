@@ -1,0 +1,43 @@
+# 2_edge_device/configs/class_weights.yaml
+# Bảng trọng số mức độ nguy hiểm của vật thể (0.0 đến 1.0) cho người khiếm thị
+
+default_weight: 0.5
+
+weights:
+  # Phương tiện di chuyển & con người (Nguy hiểm cao nhất)
+  person: 1.0
+  car: 1.0
+  motorcycle: 1.0
+  bus: 1.0
+  truck: 1.0
+  bicycle: 0.9
+  train: 1.0
+
+  # Động vật
+  dog: 0.85
+  cat: 0.7
+  horse: 0.9
+  cow: 0.9
+
+  # Vật cản lớn trong nhà / vỉa hè (Nguy cơ va chạm thân người)
+  chair: 0.75
+  couch: 0.8
+  dining table: 0.8
+  bed: 0.7
+  toilet: 0.7
+  tv: 0.65
+  refrigerator: 0.8
+  bench: 0.75
+  fire hydrant: 0.8
+  stop sign: 0.6
+
+  # Vật dụng cá nhân / kích thước nhỏ
+  backpack: 0.5
+  umbrella: 0.5
+  handbag: 0.4
+  suitcase: 0.65
+  bottle: 0.35
+  cup: 0.3
+  cell phone: 0.3
+  laptop: 0.4
+  book: 0.3

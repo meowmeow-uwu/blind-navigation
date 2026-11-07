@@ -1,0 +1,27 @@
+# 2_edge_device/configs/default_config.yaml
+
+model:
+  onnx_path: "modules/vision_local/models/yolov8n.onnx"
+  target_size: 640
+  conf_threshold: 0.45
+  nms_threshold: 0.45
+  num_threads: 4
+
+tracker:
+  track_threshold: 0.25
+  track_buffer: 30
+  match_threshold: 0.8
+
+policy:
+  weights:
+    w_class: 0.4
+    w_position: 0.35
+    w_size: 0.25
+  cooldown_seconds: 3.0
+  re_alert_delta_priority: 0.25
+
+source:
+  input: 0  # 0 cho webcam hoặc "path/to/video.mp4"
+  width: 640
+  height: 480
+  fps: 30
