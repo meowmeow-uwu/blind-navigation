@@ -238,15 +238,15 @@ def main():
                 audio.clear_emergency()
                 # Nếu có vật cản và nằm trong khoảng dẫn hướng (1.0m - 3.0m)
                 if fused_results:
-                    top = fused_results[0]
-                    # Chỉ thông báo 1-2 từ khoá và ĐÚNG 1 LẦN duy nhất theo Track ID (Yêu cầu 3 & 5)
-                    if 1.0 <= top.distance_m <= 3.0 and top.track_id != -1:
-                        for trk in tracker.tracks:
-                            if trk.track_id == top.track_id and not trk.announced:
-                                spoken = audio.announce_guidance(top.track_id, top.class_name, top.lane, top.distance_m)
+                    # Duyệt theo mức độ nguy cơ giảm dần, tìm vật cản ưu tiên cao nhất CHƯA XƯỚNG ÂM (Yêu cầu 3, 4 & 5)
+                    for obs in fused_results:
+                        if 1.0 <= obs.distance_m <= 3.0 and obs.track_id != -1:
+                            trk = next((t for t in tracker.tracks if t.track_id == obs.track_id), None)
+                            if trk and not trk.announced:
+                                spoken = audio.announce_guidance(obs.track_id, obs.class_name, obs.lane, obs.distance_m)
                                 if spoken:
-                                    trk.mark_announced(top.distance_m)
-                                break
+                                    trk.mark_announced(obs.distance_m)
+                                break  # Chỉ phát âm thanh cho 1 vật cản ưu tiên nhất chưa thông báo
 
             # Tính FPS và vẽ HUD
             t_elapsed = time.perf_counter() - t_start

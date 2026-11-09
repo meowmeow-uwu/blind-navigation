@@ -1,11 +1,16 @@
 """
-byte_tracker.py - Bộ theo dõi vật cản đa đối tượng nhẹ (Real-time Object Tracking)
+byte_tracker.py - Bộ theo dõi vật cản đa đối tượng nhẹ chuẩn ByteTrack (ECCV 2022)
 ==================================================================================
-Yêu cầu 3: Bám vết đối tượng thời gian thực & Triệt tiêu 100% nói lặp
-- Cấp phát Track ID duy nhất cho từng vật cản từ khi xuất hiện đến khi biến mất.
-- Quản lý trạng thái thông báo: Mỗi Track ID chỉ phát âm thanh thông báo ĐÚNG 1 LẦN,
-  sau đó chuyển sang trạng thái theo dõi ngầm (Silent Tracking), triệt tiêu hoàn toàn
-  hiện tượng loa lặp đi lặp lại ("Cửa... Cửa... Cửa").
+Hiện thực hóa đầy đủ Thuật toán Liên kết 2 Tầng (Two-Stage Data Association):
+- Tầng 1: Khớp các detection có độ tin cậy cao (D_high >= high_thresh, mặc định >= 0.45)
+- Tầng 2: Khớp các detection có độ tin cậy thấp (low_thresh <= D_low < high_thresh) với các
+          tracklets chưa khớp ở Tầng 1 -> Cứu vớt đối tượng bị che khuất / rung lắc / mờ hình.
+- Cấp phát Track ID duy nhất và cờ 'announced' triệt tiêu 100% nói lặp (Silent Tracking).
+- Chỉ khởi tạo Track mới cho các detection điểm cao chưa ghép (D_high); bỏ qua D_low chưa ghép (lọc nhiễu nền).
+
+Tham khảo học thuật:
+- ByteTrack paper: Y. Zhang et al., "ByteTrack: Multi-Object Tracking by Associating
+  Every Detection Box", ECCV 2022. (Top 1 MOT17 Challenge)
 """
 
 import time
@@ -96,21 +101,71 @@ class TrackedItem:
 
 class LightweightTracker:
     """
-    Bộ theo dõi nhẹ dựa trên IoU và thuật toán Hungarian.
-    Cung cấp Track ID duy nhất với chi phí tính toán cực thấp trên Raspberry Pi 4.
+    Bộ theo dõi nhẹ chuẩn hóa theo kiến trúc ByteTrack (ECCV 2022).
+    Sử dụng giải thuật liên kết 2 tầng (Two-stage Data Association):
+    - Tầng 1: Khớp D_high với các track hiện có bằng IoU & Hungarian.
+    - Tầng 2: Khớp D_low với các track chưa khớp ở Tầng 1 để cứu vớt vật cản bị che khuất.
+    - Tối ưu hóa cực hạn cho thiết bị biên Raspberry Pi 4 CPU (không tốn tài nguyên CNN Re-ID).
     """
 
-    def __init__(self, max_age: int = 15, min_hits: int = 2, iou_threshold: float = 0.25):
+    def __init__(self,
+                 max_age: int = 15,
+                 min_hits: int = 2,
+                 iou_threshold: float = 0.25,
+                 high_thresh: float = 0.45,
+                 low_thresh: float = 0.20):
         self.max_age = max_age
         self.min_hits = min_hits
         self.iou_threshold = iou_threshold
+        self.high_thresh = high_thresh
+        self.low_thresh = low_thresh
         self.tracks: List[TrackedItem] = []
+
+    def _associate(self, tracks_list: List[TrackedItem], dets_list: list, threshold: float) -> Tuple[List[int], List[int]]:
+        """
+        Khớp nối ma trận IoU giữa danh sách tracks và danh sách detections.
+        Trả về: (matched_track_indices, matched_det_indices)
+        """
+        if not tracks_list or not dets_list:
+            return [], []
+
+        iou_matrix = np.zeros((len(tracks_list), len(dets_list)), dtype=np.float32)
+        for i, trk in enumerate(tracks_list):
+            for j, det in enumerate(dets_list):
+                iou_matrix[i, j] = compute_iou(trk.bbox, tuple(det['bbox']))
+
+        matched_tracks = []
+        matched_dets = []
+
+        if HAS_SCIPY:
+            cost_matrix = 1.0 - iou_matrix
+            row_ind, col_ind = linear_sum_assignment(cost_matrix)
+            for r, c in zip(row_ind, col_ind):
+                if iou_matrix[r, c] >= threshold:
+                    matched_tracks.append(r)
+                    matched_dets.append(c)
+        else:
+            # Greedy matching fallback nếu không có scipy
+            matrix_copy = iou_matrix.copy()
+            while True:
+                idx = np.unravel_index(np.argmax(matrix_copy), matrix_copy.shape)
+                max_iou = matrix_copy[idx]
+                if max_iou < threshold:
+                    break
+                r, c = idx
+                matched_tracks.append(r)
+                matched_dets.append(c)
+                matrix_copy[r, :] = -1.0
+                matrix_copy[:, c] = -1.0
+
+        return matched_tracks, matched_dets
 
     def update(self, detections: list) -> List[TrackedItem]:
         """
         Nhận danh sách detection: [{'bbox': [x1, y1, x2, y2], 'class_name': str, 'confidence': float}, ...]
         Trả về danh sách TrackedItem đang hoạt động.
         """
+        # Bước 0: Dự đoán bước thời gian cho mọi track hiện có
         for t in self.tracks:
             t.predict()
 
@@ -118,63 +173,85 @@ class LightweightTracker:
             self.tracks = [t for t in self.tracks if t.time_since_update <= self.max_age]
             return [t for t in self.tracks if t.hits >= self.min_hits]
 
+        # ---------------------------------------------------------------------
+        # BƯỚC 1: Phân tách detections thành 2 tầng tin cậy theo ByteTrack
+        # D_high: Điểm tin cậy cao (>= high_thresh, mặc định >= 0.45)
+        # D_low:  Điểm tin cậy thấp (low_thresh <= score < high_thresh, 0.20 <= score < 0.45)
+        # ---------------------------------------------------------------------
+        d_high = []
+        d_low = []
+        for det in detections:
+            conf = det.get('confidence', 0.50)
+            if conf >= self.high_thresh:
+                d_high.append(det)
+            elif conf >= self.low_thresh:
+                d_low.append(det)
+
+        matched_track_indices = set()
+        matched_dhigh_indices = set()
+
         if len(self.tracks) > 0:
-            iou_matrix = np.zeros((len(self.tracks), len(detections)), dtype=np.float32)
-            for i, trk in enumerate(self.tracks):
-                for j, det in enumerate(detections):
-                    iou_matrix[i, j] = compute_iou(trk.bbox, tuple(det['bbox']))
-
-            matched_tracks = set()
-            matched_dets = set()
-
-            if HAS_SCIPY:
-                cost_matrix = 1.0 - iou_matrix
-                row_ind, col_ind = linear_sum_assignment(cost_matrix)
-                for r, c in zip(row_ind, col_ind):
-                    if iou_matrix[r, c] >= self.iou_threshold:
-                        self.tracks[r].update_detection(
-                            tuple(detections[c]['bbox']),
-                            detections[c]['class_name'],
-                            detections[c]['confidence']
-                        )
-                        matched_tracks.add(r)
-                        matched_dets.add(c)
-            else:
-                # Greedy matching fallback nếu không có scipy
-                while True:
-                    idx = np.unravel_index(np.argmax(iou_matrix), iou_matrix.shape)
-                    max_iou = iou_matrix[idx]
-                    if max_iou < self.iou_threshold:
-                        break
-                    r, c = idx
-                    self.tracks[r].update_detection(
-                        tuple(detections[c]['bbox']),
-                        detections[c]['class_name'],
-                        detections[c]['confidence']
+            # -----------------------------------------------------------------
+            # TẦNG 1: Khớp D_high với toàn bộ Tracklets hiện có
+            # -----------------------------------------------------------------
+            if len(d_high) > 0:
+                t1_matched_trks, t1_matched_dets = self._associate(
+                    self.tracks, d_high, self.iou_threshold
+                )
+                for trk_idx, det_idx in zip(t1_matched_trks, t1_matched_dets):
+                    det = d_high[det_idx]
+                    self.tracks[trk_idx].update_detection(
+                        tuple(det['bbox']),
+                        det['class_name'],
+                        det['confidence']
                     )
-                    matched_tracks.add(r)
-                    matched_dets.add(c)
-                    iou_matrix[r, :] = -1.0
-                    iou_matrix[:, c] = -1.0
+                    matched_track_indices.add(trk_idx)
+                    matched_dhigh_indices.add(det_idx)
 
-            # Tạo track mới cho detection chưa ghép
-            for j, det in enumerate(detections):
-                if j not in matched_dets:
+            # -----------------------------------------------------------------
+            # TẦNG 2: Khớp D_low với các Tracklets CHƯA KHỚP ở Tầng 1
+            # (Đột phá ByteTrack: Cứu các track bị che khuất / rung lắc / mờ hình)
+            # -----------------------------------------------------------------
+            unmatched_tracks_stage1 = [
+                i for i in range(len(self.tracks)) if i not in matched_track_indices
+            ]
+            if len(d_low) > 0 and len(unmatched_tracks_stage1) > 0:
+                unmatched_track_objs = [self.tracks[i] for i in unmatched_tracks_stage1]
+                t2_matched_trks, t2_matched_dets = self._associate(
+                    unmatched_track_objs, d_low, self.iou_threshold * 0.8
+                )
+                for trk_sub_idx, det_idx in zip(t2_matched_trks, t2_matched_dets):
+                    real_trk_idx = unmatched_tracks_stage1[trk_sub_idx]
+                    det = d_low[det_idx]
+                    self.tracks[real_trk_idx].update_detection(
+                        tuple(det['bbox']),
+                        det['class_name'],
+                        det['confidence']
+                    )
+                    matched_track_indices.add(real_trk_idx)
+
+            # -----------------------------------------------------------------
+            # BƯỚC 3: Tạo track mới - CHỈ CHO D_high chưa ghép
+            # (D_low chưa ghép xem như nhiễu nền, TUYỆT ĐỐI KHÔNG TẠO TRACK MỚI)
+            # -----------------------------------------------------------------
+            for j, det in enumerate(d_high):
+                if j not in matched_dhigh_indices:
                     self.tracks.append(TrackedItem(
                         tuple(det['bbox']),
                         det['class_name'],
                         det['confidence']
                     ))
         else:
-            for det in detections:
+            # Chưa có track nào tồn tại: Khởi tạo track mới từ các detection D_high
+            for det in d_high:
                 self.tracks.append(TrackedItem(
                     tuple(det['bbox']),
                     det['class_name'],
                     det['confidence']
                 ))
 
-        # Lọc bỏ track đã mất dấu quá lâu
+        # Lọc bỏ track đã mất dấu quá lâu (> max_age)
         self.tracks = [t for t in self.tracks if t.time_since_update <= self.max_age]
 
-        # Trả về các track đã đủ độ tin cậy
+        # Trả về các track đã đủ độ tin cậy (hits >= min_hits)
         return [t for t in self.tracks if t.hits >= self.min_hits]
