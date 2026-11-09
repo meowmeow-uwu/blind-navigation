@@ -27,7 +27,7 @@ ultrasonic:
   min_range_m: 0.03                  # Cự ly đo nhỏ nhất (3 cm)
   max_range_m: 4.0                   # Cự ly đo lớn nhất (4 m)
   poll_rate_hz: 30                   # Tần số đọc xung siêu âm
-  emergency_distance_m: 0.8          # Ngưỡng khoảng cách kích hoạt an toàn khẩn cấp
+  emergency_distance_m: 1.0          # Ngưỡng khoảng cách kích hoạt an toàn khẩn cấp (ISO 15623)
 
 kalman_filter:
   q_accel_noise: 0.5                 # Nhiễu quá trình gia tốc sigma_a^2
@@ -48,10 +48,10 @@ conflict_resolution:
   unlabeled_obstacle_confirm_count: 2 # Số lần siêu âm báo gần liên tiếp để cảnh báo vật cản không nhãn
 
 risk_scoring:
-  w_ttc: 0.40                        # Trọng số thời gian đến lúc va chạm (TTC)
-  w_distance: 0.30                   # Trọng số cự ly gần
-  w_heading: 0.15                    # Trọng số góc lệch tâm bước đi
-  w_class: 0.15                      # Trọng số mức độ nguy hại của loại vật cản
+  w_distance: 0.40                   # Trọng số cự ly gần (40% - Báo cáo Pillar 4)
+  w_class: 0.30                      # Trọng số mức độ nguy hại của loại vật cản (30%)
+  w_heading: 0.20                    # Trọng số góc lệch tâm bước đi (20%)
+  w_ttc: 0.10                        # Trọng số thời gian đến lúc va chạm (10%)
   ttc_critical_s: 2.0                # Ngưỡng TTC cực kỳ nguy hiểm (dưới 2 giây)
 
 # Kích thước vật lý thực tế trung bình (Physical Prior Width, đơn vị: mét)

@@ -443,19 +443,20 @@ class AudioManager:
         """Xoá trạng thái khẩn cấp khi cự ly đã an toàn."""
         self.is_emergency = False
 
-    def announce_guidance(self, track_id: int, class_name: str, lane: str, distance_m: float) -> bool:
+    def announce_guidance(self, track_id: int, class_name: str, lane: str, distance_m: float, force: bool = False) -> bool:
         """
         KÊNH DẪN HƯỚNG (1.5m - 3.0m) (Yêu cầu 3 & 5):
         - Dùng 1-2 từ khoá ngắn gọn: [Vật] [Hướng] (ví dụ: "Bàn trước mặt", "Cột bên trái").
         - CHỈ NÓI ĐÚNG 1 LẦN cho mỗi Track ID, sau đó bám vết ngầm.
+        - Cho phép phát lại nếu nguy cơ tăng cao đáng kể (force=True).
         - Giữ khoảng lặng tối thiểu giữa các lần nói (cooldown >= 2.5s).
         """
         # Nếu đang ở cự ly khẩn cấp thì không nói giọng nói dài
         if self.is_emergency or distance_m < 1.0:
             return False
 
-        # YÊU CẦU 3: Đã đọc Track ID này rồi thì im lặng theo dõi ngầm (100% chống lặp)
-        if track_id in self.announced_track_ids:
+        # YÊU CẦU 3: Đã đọc Track ID này rồi thì im lặng theo dõi ngầm (100% chống lặp), trừ khi force=True
+        if track_id in self.announced_track_ids and not force:
             return False
 
         now = time.time()
@@ -473,8 +474,10 @@ class AudioManager:
         lane_name = LANE_SHORT_VI.get(lane, "trước mặt")
         speech_text = f"{obj_name} {lane_name}"
 
-        # Đánh dấu đã đọc
+        # Đánh dấu đã đọc và dọn dẹp bộ nhớ nếu lưu trữ quá nhiều
         self.announced_track_ids.add(track_id)
+        if len(self.announced_track_ids) > 300:
+            self.announced_track_ids = {track_id}
         self.last_voice_time = now
         self.guidance_id += 1
         self.current_guidance_text = speech_text

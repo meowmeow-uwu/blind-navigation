@@ -49,6 +49,11 @@ class TrackedItem:
     """Vật cản được theo dõi liên tục qua nhiều khung hình."""
     _id_counter = 0
 
+    @classmethod
+    def reset_counter(cls, start: int = 0):
+        """Khởi động lại bộ đếm Track ID."""
+        cls._id_counter = start
+
     def __init__(self, bbox: Tuple[int, int, int, int], class_name: str, confidence: float):
         TrackedItem._id_counter += 1
         self.track_id = TrackedItem._id_counter
@@ -60,7 +65,7 @@ class TrackedItem:
         self.age = 1
         self.time_since_update = 0
 
-        # Trạng thái thông báo âm thanh (Yêu cầu 3: Triệt tiêu nói lặp)
+        # Trạng thái thông báo âm thanh (Yêu cầu 3 & HCI: Chống nói lặp)
         self.announced = False
         self.last_announced_time = 0.0
         self.last_announced_distance = 0.0
@@ -93,6 +98,20 @@ class TrackedItem:
         self.announced = True
         self.last_announced_time = time.time()
         self.last_announced_distance = distance_m
+
+    def should_reannounce(self, current_distance: float) -> bool:
+        """
+        Kiểm tra điều kiện thông báo lại nếu nguy cơ tăng cao:
+        - Chưa thông báo: Luôn phát.
+        - Đã thông báo: Chỉ phát lại nếu vật cản tiến lại gần đáng kể
+          (giảm hơn 0.8m so với lần đọc trước) và đã qua thời gian cooldown >= 3.0s.
+        """
+        if not self.announced:
+            return True
+        now = time.time()
+        if (now - self.last_announced_time >= 3.0) and (self.last_announced_distance - current_distance >= 0.8):
+            return True
+        return False
 
     def predict(self):
         self.age += 1

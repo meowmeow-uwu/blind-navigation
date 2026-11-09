@@ -5,7 +5,7 @@ import numpy as np
 from .base_detector import BaseDetector
 
 class YoloNcnnRunner(BaseDetector):
-    def __init__(self, param_path: str, bin_path: str, target_size: int = 320, conf_thresh: float = 0.45, nms_thresh: float = 0.45):
+    def __init__(self, param_path: str, bin_path: str, target_size: int = 320, conf_thresh: float = 0.20, nms_thresh: float = 0.45):
         self.param_path = param_path
         self.bin_path = bin_path
         self.target_size = target_size
