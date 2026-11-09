@@ -38,7 +38,10 @@ from modules.vision_local.freshest_camera import FreshestCameraReader
 LABEL_DISPLAY = {
     "person": "NGUOI", "chair": "GHE", "dining table": "BAN",
     "stairs": "CAU THANG", "pole": "COT", "door": "CUA",
-    "vật cản": "VAT CAN", "bicycle": "XE DAP", "car": "O TO"
+    "vật cản": "VAT CAN", "bicycle": "XE DAP", "car": "O TO",
+    "motorcycle": "XE MAY", "bus": "XE BUS", "truck": "XE TAI",
+    "bottle": "CHAI NUOC", "backpack": "BALO", "cell phone": "DIEN THOAI",
+    "laptop": "MAY TINH", "tv": "MAN HINH"
 }
 
 
@@ -57,13 +60,15 @@ def init_detector():
     try:
         from modules.vision_local.yolo_ncnn_runner import YoloNcnnRunner
         if os.path.exists(param_path) and os.path.exists(bin_path):
-            return YoloNcnnRunner(param_path, bin_path, target_size=320)
-    except Exception:
-        pass
+            detector = YoloNcnnRunner(param_path, bin_path, target_size=320, conf_thresh=0.25)
+            print("[AI] ✅ Đã nạp thành công mô hình YOLOv8 NCNN thời gian thực (conf_thresh=0.25)!")
+            return detector
+    except Exception as e:
+        print(f"[AI] ⚠️ Không thể nạp YOLOv8 NCNN ({e}). Sử dụng Mock Detector.")
 
     class SimpleMockDetector:
         def detect(self, _):
-            return [{'class_name': 'chair', 'bbox': [240, 180, 400, 420], 'confidence': 0.88}]
+            return []
     return SimpleMockDetector()
 
 
@@ -225,7 +230,7 @@ def main():
             raw_d, _, is_sensor_emergency = sensor.get_latest_reading()
 
             # Nhận diện vật thể & Bám vết (Yêu cầu 3: ByteTrack)
-            detections = sim_dets if (use_synthetic and is_mock) else detector.detect(frame)
+            detections = sim_dets if use_synthetic else detector.detect(frame)
             tracked_items = tracker.update(detections)
 
             # Hợp nhất cảm biến siêu âm & Xếp hạng nguy cơ (Yêu cầu 2 & 4)
