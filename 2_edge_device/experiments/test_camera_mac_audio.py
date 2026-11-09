@@ -67,22 +67,17 @@ def init_detector():
     try:
         from modules.vision_local.yolo_ncnn_runner import YoloNcnnRunner
         if param_path.exists() and bin_path.exists():
-            print("  ✅ Đã tải mô hình YOLOv8 NCNN thành công!")
-            return YoloNcnnRunner(str(param_path), str(bin_path), target_size=320)
-    except Exception:
-        pass
+            detector = YoloNcnnRunner(str(param_path), str(bin_path), target_size=320, conf_thresh=0.20)
+            print("  ✅ Đã tải mô hình YOLOv8 NCNN thành công (conf_thresh=0.20)!")
+            return detector
+    except Exception as e:
+        print(f"  ⚠️ Lỗi nạp NCNN: {e}")
 
     # Simple detector fallback
     print("  ℹ️ Sử dụng Simple Color Detector (hoặc mô phỏng phát hiện) để kiểm tra luồng camera...")
     class SimpleDetector:
         def detect(self, frame):
-            # Nhận diện cơ bản vùng chuyển động hoặc bbox ở trung tâm
-            h, w = frame.shape[:2]
-            return [{
-                'class_name': 'person',
-                'bbox': [int(w * 0.3), int(h * 0.2), int(w * 0.7), int(h * 0.85)],
-                'confidence': 0.85
-            }]
+            return []
     return SimpleDetector()
 
 

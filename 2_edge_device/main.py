@@ -60,8 +60,8 @@ def init_detector():
     try:
         from modules.vision_local.yolo_ncnn_runner import YoloNcnnRunner
         if os.path.exists(param_path) and os.path.exists(bin_path):
-            detector = YoloNcnnRunner(param_path, bin_path, target_size=320, conf_thresh=0.25)
-            print("[AI] ✅ Đã nạp thành công mô hình YOLOv8 NCNN thời gian thực (conf_thresh=0.25)!")
+            detector = YoloNcnnRunner(param_path, bin_path, target_size=320, conf_thresh=0.20)
+            print("[AI] ✅ Đã nạp thành công mô hình YOLOv8 NCNN thời gian thực (target_size=320, conf_thresh=0.20)!")
             return detector
     except Exception as e:
         print(f"[AI] ⚠️ Không thể nạp YOLOv8 NCNN ({e}). Sử dụng Mock Detector.")
