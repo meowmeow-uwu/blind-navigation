@@ -1,0 +1,97 @@
+{
+  "generated_at": "2026-11-10T09:16:16.767036Z",
+  "source_dataset": "datasets/raw/ROD-Dataset/dataset",
+  "processed_dataset": "datasets/processed/rod_detection_v1",
+  "file_counts": {
+    "detection_only": 19647,
+    "segmentation_only": 4547,
+    "mixed": 33,
+    "empty": 99,
+    "invalid": 0,
+    "total": 24326
+  },
+  "instance_counts": {
+    "polygons_converted": 5138,
+    "detection_lines_preserved": 35057,
+    "invalid_lines": 0,
+    "total_final_instances": 40195
+  },
+  "split_statistics": {
+    "train": {
+      "images": 19186,
+      "total_files": 19186,
+      "detection_only": 15659,
+      "segmentation_only": 3420,
+      "mixed": 24,
+      "empty": 83,
+      "invalid": 0,
+      "polygons_converted": 3915,
+      "detection_lines_preserved": 28336,
+      "invalid_lines": 0,
+      "final_instances": 32251
+    },
+    "valid": {
+      "images": 3511,
+      "total_files": 3511,
+      "detection_only": 2757,
+      "segmentation_only": 735,
+      "mixed": 8,
+      "empty": 11,
+      "invalid": 0,
+      "polygons_converted": 808,
+      "detection_lines_preserved": 4764,
+      "invalid_lines": 0,
+      "final_instances": 5572
+    },
+    "test": {
+      "images": 1629,
+      "total_files": 1629,
+      "detection_only": 1231,
+      "segmentation_only": 392,
+      "mixed": 1,
+      "empty": 5,
+      "invalid": 0,
+      "polygons_converted": 415,
+      "detection_lines_preserved": 1957,
+      "invalid_lines": 0,
+      "final_instances": 2372
+    }
+  },
+  "invalid_rows_logged": [],
+  "checksums": {
+    "source_labels_manifest_sha256": "f2b25935960a7e9c25ab715dd6cb1477f876537029848b6d79c0551ea21eb3aa",
+    "output_labels_manifest_sha256": "87cd111cfd533999a0cdc9e173397d5466603c137726cba35bae8a15ffedbeb7",
+    "total_files_audited": 24326
+  },
+  "img_20781_txt_change": {
+    "split": "test",
+    "rel_path": "test/labels/IMG_20781.txt",
+    "source_sha256": "0337716ecfe7e3d422c9ff0df87d794de6ac6c8f5ed23d13464e3dec99dcc3ec",
+    "output_sha256": "4eded4ca74e2da81034b87fa64cd2fbf8d30deab9ffe3bbf9648bab1db1b7576",
+    "raw_lines": [
+      "14 0.56953125 0.4796875 0.01953125 0.0390625",
+      "14 0.3875 0.6111111109375 0.53125 0.6111111109375 0.52421875 0.5930555562500001 0.4015625 0.590277778125 0.3875 0.6111111109375"
+    ],
+    "processed_lines": [
+      "14 0.56953125 0.4796875 0.01953125 0.0390625",
+      "14 0.459375 0.600694 0.143750 0.020833"
+    ],
+    "summary": {
+      "file": "test/labels/IMG_20781.txt",
+      "category": "mixed",
+      "detection_lines": 1,
+      "segmentation_lines": 1,
+      "invalid_lines": 0,
+      "clean_instances": 2,
+      "invalid_rows": []
+    },
+    "transformation_details": [
+      {
+        "line_1": "Retained valid detection bounding box: 14 0.56953125 0.4796875 0.01953125 0.0390625",
+        "line_2": "Converted 5-point segmentation polygon (11 tokens) to YOLO bbox: xmin=0.3875, xmax=0.53125, ymin=0.590278, ymax=0.611111 -> 14 0.459375 0.600694 0.143750 0.020833"
+      }
+    ]
+  },
+  "schema_audit_csv": "datasets/manifests/rod_label_schema_audit.csv",
+  "status": "clean"
+}

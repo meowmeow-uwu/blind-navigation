@@ -1,58 +1,69 @@
 {
-  "created_at": "2026-11-07T09:51:29+00:00",
+  "updated_at": "2026-11-10T14:26:00+00:00",
   "models": {
     "yolov8n": {
       "status": "validated",
-      "metadata": "metadata/yolov8n.json",
-      "checkpoint": "pytorch/yolov8n.pt",
-      "sha256": "f59b3d833e2ff32e194b5bb8e08d211dc7c5bdf144b90d2c8412c47ccfc83b36",
+      "checkpoint": "rod-paper/yolov8n-rod/yolov8n_best.pt",
       "onnx_fp32_320": {
         "status": "exported",
-        "validation": "pending",
+        "validation": "passed",
         "path": "weights/onnx/yolov8n_320_fp32.onnx",
-        "sha256": "b23211ee9efaa3d650054de2f9706482b56ea36c4c3bf914f85c904d68f50b0f",
-        "metadata": "weights/metadata/yolov8n_onnx.json"
+        "sha256": "265be07a90a6087b1418002becf79ebf12e7209dc4939028ca6daeed43200c83"
+      },
+      "int8_ptq_320": {
+        "status": "quantized",
+        "path": "weights/int8/yolov8n_320_int8.onnx",
+        "sha256": "34e8fd11c869020e495dd7488ccd7296db5852469ec6ebf74da7b73a7e1dfbc3",
+        "compression_ratio": "3.64x"
       }
     },
-    "yolo11n": {
+    "yolov9t": {
       "status": "validated",
-      "metadata": "metadata/yolo11n.json",
-      "checkpoint": "pytorch/yolo11n.pt",
-      "sha256": "0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1",
+      "checkpoint": "rod-paper/yolov9t/yolov9t_best.pt",
       "onnx_fp32_320": {
         "status": "exported",
-        "validation": "pending",
-        "path": "weights/onnx/yolo11n_320_fp32.onnx",
-        "sha256": "f2e265d0d0ccd1f64c86b3d77e0ae85517268020a7aa4a8e4881ceeb841236e3",
-        "metadata": "weights/metadata/yolo11n_onnx.json"
+        "validation": "passed",
+        "path": "weights/onnx/yolov9t_320_fp32.onnx",
+        "sha256": "66bbc5719bd664dcbc17ba9a619b423485a392a3bd8e05624b53cffdac13169d"
+      },
+      "int8_ptq_320": {
+        "status": "quantized",
+        "path": "weights/int8/yolov9t_320_int8.onnx",
+        "sha256": "c8e162a343c6f02e057b257a4d2e06b8fb17b6becbedc302b373a78757807ac4",
+        "compression_ratio": "2.94x"
       }
     },
-    "yolo12n": {
+    "yolov12n": {
       "status": "validated",
-      "metadata": "metadata/yolo12n.json",
-      "checkpoint": "pytorch/yolo12n.pt",
-      "sha256": "419ff3dca37d69bacc93a50fa0c186a1c6f9fe62fae0f108b0872829689e9ca6",
+      "checkpoint": "rod-paper/yolov12n/yolov12n_best.pt",
       "onnx_fp32_320": {
         "status": "exported",
-        "validation": "pending",
-        "path": "weights/onnx/yolo12n_320_fp32.onnx",
-        "sha256": "b9fe632d27ac7f15bae020a2e4cde2088dceab8e154c74e64eae337511857cbd",
-        "metadata": "weights/metadata/yolo12n_onnx.json"
+        "validation": "passed",
+        "path": "weights/onnx/yolov12n_320_fp32.onnx",
+        "sha256": "e045a111a126e04d11695d051e05e2aa2eae24dded649760fdfbb539e1009753"
+      },
+      "int8_ptq_320": {
+        "status": "quantized",
+        "path": "weights/int8/yolov12n_320_int8.onnx",
+        "sha256": "d9fd1f168ef219a350217c26a31f954d859f541c5a83b4ef910b9a5b66866980",
+        "compression_ratio": "3.21x"
       }
     },
-    "yolo26n": {
+    "yolov26n": {
       "status": "validated",
-      "metadata": "metadata/yolo26n.json",
-      "checkpoint": "pytorch/yolo26n.pt",
-      "sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+      "checkpoint": "rod-paper/yolov26n/yolo26n_best.pt",
       "onnx_fp32_320": {
         "status": "exported",
-        "validation": "pending",
+        "validation": "passed",
         "path": "weights/onnx/yolo26n_320_fp32.onnx",
-        "sha256": "ce0da533184b3df3ebcd2c527f7dd3225f0dba0d9664f3788d1a86f0be33d3ef",
-        "metadata": "weights/metadata/yolo26n_onnx.json"
+        "sha256": "198e70d734623e910c79bd46e58b4e5f315b5ac9edb6d13270f6df969837108a"
+      },
+      "int8_ptq_320": {
+        "status": "quantized",
+        "path": "weights/int8/yolo26n_320_int8.onnx",
+        "sha256": "04cc86fe63363fe3d9415f1ea928e7b9eaa31564b52a57d4d00dda8ffa5e9fd2",
+        "compression_ratio": "3.34x"
       }
     }
-  },
-  "updated_at": "2026-11-07T09:53:50+00:00"
+  }
 }

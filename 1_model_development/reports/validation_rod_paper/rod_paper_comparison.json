@@ -1,0 +1,114 @@
+[
+  {
+    "model": "yolov8n",
+    "weights_path": "/home/dutai/pbl6-blind-navigation/rod-paper/yolov8n-rod/yolov8n_best.pt",
+    "measured": {
+      "model": "yolov8n",
+      "weights": "/home/dutai/pbl6-blind-navigation/rod-paper/yolov8n-rod/yolov8n_best.pt",
+      "params": 3015723,
+      "mAP50": 0.9103761963207492,
+      "mAP50_95": 0.7429549220413062,
+      "precision": 0.9093831334179204,
+      "recall": 0.867927809399968,
+      "inference_ms": 1.21,
+      "total_ms": 2.17,
+      "fps": 461.68,
+      "eval_duration_sec": 7.7
+    },
+    "paper": {
+      "mAP50": 0.8756603587558669,
+      "mAP50_95": 0.7183965261218325,
+      "precision": 0.9083598433868936,
+      "recall": 0.8698622648460556,
+      "params": 3010523,
+      "avg_ms_per_img": 12.543,
+      "fps": 79.72,
+      "test_images": 1629
+    },
+    "timestamp": "2026-11-09T16:36:31.686463"
+  },
+  {
+    "model": "yolov9t",
+    "weights_path": "/home/dutai/pbl6-blind-navigation/rod-paper/yolov9t/yolov9t_best.pt",
+    "measured": {
+      "model": "yolov9t",
+      "weights": "/home/dutai/pbl6-blind-navigation/rod-paper/yolov9t/yolov9t_best.pt",
+      "params": 2010283,
+      "mAP50": 0.9194968592627859,
+      "mAP50_95": 0.7726869671198903,
+      "precision": 0.9014784754698557,
+      "recall": 0.8830425289719908,
+      "inference_ms": 1.57,
+      "total_ms": 2.54,
+      "fps": 393.01,
+      "eval_duration_sec": 6.1
+    },
+    "paper": {
+      "mAP50": 0.882499256781174,
+      "mAP50_95": 0.7495928373516831,
+      "precision": 0.9042469001045133,
+      "recall": 0.8799984735603928,
+      "params": 1975659,
+      "avg_ms_per_img": 14.196,
+      "fps": 70.44,
+      "test_images": 1629
+    },
+    "timestamp": "2026-11-09T16:36:37.977932"
+  },
+  {
+    "model": "yolov12n",
+    "weights_path": "/home/dutai/pbl6-blind-navigation/rod-paper/yolov12n/yolov12n_best.pt",
+    "measured": {
+      "model": "yolov12n",
+      "weights": "/home/dutai/pbl6-blind-navigation/rod-paper/yolov12n/yolov12n_best.pt",
+      "params": 2572923,
+      "mAP50": 0.9110732999931273,
+      "mAP50_95": 0.761029709969316,
+      "precision": 0.8967168179138036,
+      "recall": 0.887393698843097,
+      "inference_ms": 1.77,
+      "total_ms": 2.73,
+      "fps": 366.46,
+      "eval_duration_sec": 6.45
+    },
+    "paper": {
+      "mAP50": 0.8776897288069136,
+      "mAP50_95": 0.7386164167612496,
+      "precision": 0.8989824966364846,
+      "recall": 0.8892866098980794,
+      "params": 2561603,
+      "avg_ms_per_img": 16.743,
+      "fps": 59.73,
+      "test_images": 1629
+    },
+    "timestamp": "2026-11-09T16:36:44.497735"
+  },
+  {
+    "model": "yolov26n",
+    "weights_path": "/home/dutai/pbl6-blind-navigation/rod-paper/yolov26n/yolo26n_best.pt",
+    "measured": {
+      "model": "yolov26n",
+      "weights": "/home/dutai/pbl6-blind-navigation/rod-paper/yolov26n/yolo26n_best.pt",
+      "params": 2513550,
+      "mAP50": 0.9164761909516449,
+      "mAP50_95": 0.7714996251186421,
+      "precision": 0.9090549302974189,
+      "recall": 0.890715278664578,
+      "inference_ms": 1.19,
+      "total_ms": 2.19,
+      "fps": 456.43,
+      "eval_duration_sec": 5.55
+    },
+    "paper": {
+      "mAP50": 0.873728430046977,
+      "mAP50_95": 0.7422223011000257,
+      "precision": 0.9246248311938795,
+      "recall": 0.8755589576426278,
+      "params": 2379711,
+      "avg_ms_per_img": 12.885,
+      "fps": 77.61,
+      "test_images": 1629
+    },
+    "timestamp": "2026-11-09T16:36:50.113469"
+  }
+]

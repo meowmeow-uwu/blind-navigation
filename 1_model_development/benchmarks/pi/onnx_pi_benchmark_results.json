@@ -1,0 +1,78 @@
+{
+  "yolov8n": {
+    "model": "yolov8n",
+    "format": "onnx_fp32",
+    "imgsz": 320,
+    "runs": 30,
+    "latency": {
+      "mean_ms": 9.66,
+      "p50_ms": 9.57,
+      "p95_ms": 11.6,
+      "p99_ms": 11.9
+    },
+    "environment": {
+      "ram_peak_mb": 860.7,
+      "start_temperature_c": 27.8,
+      "end_temperature_c": 27.8,
+      "is_pi": false,
+      "throttled": false
+    }
+  },
+  "yolov9t": {
+    "model": "yolov9t",
+    "format": "onnx_fp32",
+    "imgsz": 320,
+    "runs": 30,
+    "latency": {
+      "mean_ms": 10.67,
+      "p50_ms": 10.61,
+      "p95_ms": 11.12,
+      "p99_ms": 11.3
+    },
+    "environment": {
+      "ram_peak_mb": 876.8,
+      "start_temperature_c": 27.8,
+      "end_temperature_c": 27.8,
+      "is_pi": false,
+      "throttled": false
+    }
+  },
+  "yolov12n": {
+    "model": "yolov12n",
+    "format": "onnx_fp32",
+    "imgsz": 320,
+    "runs": 30,
+    "latency": {
+      "mean_ms": 9.84,
+      "p50_ms": 9.7,
+      "p95_ms": 10.69,
+      "p99_ms": 11.03
+    },
+    "environment": {
+      "ram_peak_mb": 893.4,
+      "start_temperature_c": 27.8,
+      "end_temperature_c": 27.8,
+      "is_pi": false,
+      "throttled": false
+    }
+  },
+  "yolov26n": {
+    "model": "yolov26n",
+    "format": "onnx_fp32",
+    "imgsz": 320,
+    "runs": 30,
+    "latency": {
+      "mean_ms": 9.29,
+      "p50_ms": 9.51,
+      "p95_ms": 10.58,
+      "p99_ms": 10.65
+    },
+    "environment": {
+      "ram_peak_mb": 902.3,
+      "start_temperature_c": 27.8,
+      "end_temperature_c": 27.8,
+      "is_pi": false,
+      "throttled": false
+    }
+  }
+}

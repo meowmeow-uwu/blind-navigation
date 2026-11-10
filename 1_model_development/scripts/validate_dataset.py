@@ -77,7 +77,12 @@ def validate_dataset(dataset_dir: Path, manifest_dir: Path, nc: int = 25) -> dic
 
         lbl_stems = {lbl.stem: lbl for lbl in labels}
 
-        for img_path in images:
+        print(f"Validating split '{split}': {len(images)} images, {len(labels)} labels...", flush=True)
+
+        for img_idx, img_path in enumerate(images, start=1):
+            if img_idx % 2000 == 0 or img_idx == len(images):
+                print(f"  [{split}] Validated {img_idx}/{len(images)} images...", flush=True)
+
             stem = img_path.stem
 
             # Check filename collision across splits
