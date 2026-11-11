@@ -1,365 +1,102 @@
-# Phase A: Model Registry, Export, and Benchmarking
+# Module 1: Model Development, Optimization & Export
 
-This document describes Phase A of the blind navigation model development pipeline: establishing a reliable model registry, exporting PyTorch checkpoints to ONNX, validating output equivalence, and profiling inference latency on the host machine.
-
-## 📋 Objectives
-
-### Day 1-2: Model Registry and PyTorch Smoke Test
-- ✅ Registry of 4 YOLO models (YOLOv8n, YOLO11n, YOLO12n, YOLO26n)
-- ✅ YOLOv8n baseline downloaded and validated
-- ✅ Smoke tests confirm all models load and run inference on CPU
-
-### Day 3-4: ONNX Export and Equivalence Validation
-- ✅ Export all 4 models to ONNX FP32 (opset 12, batch=1, imgsz=320)
-- ✅ ONNX graph validation via onnx.checker
-- ✅ ONNX Runtime smoke tests on single image
-- ✅ Support for both raw output (YOLOv8n, YOLO11n, YOLO12n) and end-to-end NMS (YOLO26n)
-
-### Day 5-7: Host Benchmarking and Pi-Ready Harness
-- ✅ Model-only benchmark: 1000 runs × 3 repeats per model
-- ✅ Offline video pipeline benchmark
-- ✅ Latency breakdown and bottleneck analysis
-- ✅ Environment profiling and Pi-ready harness
-
-## 🚀 Quick Start
-
-### Setup
-```bash
-cd blind-navigation/1_model_development
-
-# Activate venv (from repo root)
-source ../../.venv/bin/activate
-
-# Install (if needed)
-pip install -r requirements-lock.txt
-```
-
-### Run Full Phase A Benchmark
-```bash
-bash scripts/run_phase_a_host.sh
-```
-
-This will:
-1. Collect environment information
-2. Run model-only benchmark (1000 runs × 3 repeats)
-3. Run offline video benchmark
-4. Generate CSV and JSON summaries
-
-Results:
-- `benchmarks/summaries/phase_a_host_summary.csv` - unified results table
-- `benchmarks/summaries/phase_a_host_summary.json` - detailed JSON
-- `benchmarks/environment/host.json` - environment metadata
-
-## 📊 Results Summary
-
-### Host Benchmark (CPU, Intel i5-10400, Linux)
-
-| Model | Model p50 (ms) | Video p50 (ms) | Pipeline FPS | Peak RAM (MB) |
-|-------|----------------|----------------|--------------|---------------|
-| YOLOv8n | 16.3 | 18.1 | 30.0 | 138.7 |
-| YOLO11n | 15.6 | 17.2 | 30.0 | 142.9 |
-| YOLO12n | 17.3 | 18.9 | 30.0 | 143.1 |
-| YOLO26n | 14.4 | 15.8 | 30.0 | 140.7 |
-
-**Key Observations:**
-- All models achieve **30 FPS on CPU** in offline pipeline
-- YOLO26n is fastest (end-to-end NMS built-in)
-- YOLOv8n is largest (12.1 MB) but within acceptable range
-- Memory usage stable ~140 MB across models
-
-## 📁 Directory Structure
-
-```
-1_model_development/
-├── assets/
-│   ├── smoke_test.jpg                  # Test image for smoke tests
-│   ├── export_validation/              # Validation image set
-│   │   └── test_001.jpg
-│   └── benchmark_video/
-│       ├── walking_scene.mp4           # Generated 10s video @ 30 fps
-│       └── manifest.json
-├── benchmarks/
-│   ├── environment/
-│   │   └── host.json                   # CPU, RAM, Python versions
-│   ├── raw/                            # Raw CSV and JSON per model
-│   │   ├── yolov8n_onnx_fp32_results.csv
-│   │   └── benchmark_video_summary.json
-│   └── summaries/
-│       ├── phase_a_host_summary.csv    # Unified table
-│       ├── phase_a_host_summary.json   # Detailed results
-│       └── benchmark_model_onnx_fp32.json
-├── configs/
-│   ├── models.yaml                     # Model registry
-│   ├── export.yaml                     # ONNX export config
-│   └── benchmark.yaml                  # Benchmark config
-├── models/
-│   ├── base_detector.py                # Detection dataclass
-│   ├── model_registry.py               # Model metadata loader
-│   ├── onnx_detector.py                # ONNX Runtime detector
-│   └── adapters/
-│       └── __init__.py
-├── scripts/
-│   ├── download_models.py              # Download .pt checkpoints
-│   ├── export_onnx.py                  # Export to ONNX
-│   ├── inspect_onnx.py                 # ONNX graph inspection
-│   ├── smoke_test_model.py             # PyTorch smoke test
-│   ├── smoke_test_onnx.py              # ONNX Runtime smoke test
-│   ├── benchmark_model.py              # Model-only benchmark
-│   ├── benchmark_video.py              # Video pipeline benchmark
-│   ├── benchmark_pi.py                 # Pi benchmark harness
-│   ├── collect_environment.py          # Environment profiler
-│   ├── summarize_benchmarks.py         # Generate reports
-│   ├── run_phase_a_host.sh             # Run all benchmarks (host)
-│   └── run_phase_a_pi.sh               # Run all benchmarks (Pi)
-├── tests/
-│   ├── conftest.py
-│   ├── test_model_registry.py
-│   ├── test_download_models.py
-│   ├── test_preprocessing.py
-│   ├── test_postprocessing.py
-│   ├── test_onnx_graph.py
-│   └── test_detector_contract.py
-├── weights/
-│   ├── pytorch/
-│   │   ├── yolov8n.pt                  # (gitignored)
-│   │   └── ...
-│   ├── onnx/
-│   │   ├── yolov8n_320_fp32.onnx       # (gitignored)
-│   │   └── ...
-│   ├── metadata/
-│   │   ├── yolov8n.json
-│   │   ├── yolov8n_onnx.json
-│   │   └── onnx_manifest.json
-│   └── manifest.json                   # Source of truth for all models
-├── requirements.txt                    # Pinned versions
-├── requirements-lock.txt               # Frozen environment
-└── README.md                           # This file
-```
-
-## 🔍 Model Status
-
-### Validated Models
-
-| Model | Framework | Format | Status | Size |
-|-------|-----------|--------|--------|------|
-| YOLOv8n | PyTorch | ONNX FP32 | ✅ Validated | 6.2 MB (pt) / 12.1 MB (onnx) |
-| YOLO11n | PyTorch | ONNX FP32 | ✅ Validated | 5.4 MB (pt) / 10.1 MB (onnx) |
-| YOLO12n | PyTorch | ONNX FP32 | ✅ Validated | 5.3 MB (pt) / 10.1 MB (onnx) |
-| YOLO26n | PyTorch | ONNX FP32 | ✅ Validated | 5.3 MB (pt) / 9.4 MB (onnx) |
-
-### Export Status
-
-- **YOLO26n**: Exports with **end-to-end NMS** (output shape `[1, 300, 6]`), unlike others
-- **Others**: Raw output (shape `[1, 84, 2100]`), requires post-NMS
-- **Adapter Pattern**: Automatically detects output format and processes accordingly
-
-## 🧪 Testing
-
-### Unit Tests
-```bash
-pytest tests/ -v
-```
-
-All tests pass (35+ tests covering):
-- Model registry and manifest handling
-- Image preprocessing (letterbox, normalization)
-- Detection postprocessing (NMS, coordinate scaling)
-- ONNX graph structure and validity
-- Detector contracts (PyTorch and ONNX consistency)
-
-### Smoke Tests
-
-PyTorch:
-```bash
-python scripts/smoke_test_model.py \
-  --models yolov8n yolo11n yolo12n yolo26n \
-  --source assets/smoke_test.jpg
-```
-
-ONNX:
-```bash
-python scripts/smoke_test_onnx.py \
-  --models yolov8n yolo11n yolo12n yolo26n \
-  --source assets/smoke_test.jpg
-```
-
-## 📈 Benchmarking
-
-### Model-Only Benchmark
-```bash
-python scripts/benchmark_model.py \
-  --models yolov8n yolo11n yolo12n yolo26n \
-  --config configs/benchmark.yaml \
-  --images assets/export_validation
-```
-
-**Configuration:**
-- Warmup: 50 runs
-- Measured: 1000 runs
-- Repeats: 3 independent runs
-- Input: Single image, 320×320
-- No rendering, tracking, or audio
-
-**Output:**
-- Raw CSV per model: `benchmarks/raw/` 
-- Summary JSON: `benchmarks/summaries/benchmark_model_onnx_fp32.json`
-- Metrics: p50, p95, p99, mean, peak RAM
-
-### Video Pipeline Benchmark
-```bash
-python scripts/benchmark_video.py \
-  --models yolov8n yolo11n yolo12n yolo26n \
-  --video assets/benchmark_video/walking_scene.mp4 \
-  --config configs/benchmark.yaml
-```
-
-**Configuration:**
-- Sequential frame processing (no parallel decode/inference)
-- No rendering or analysis during benchmark
-- Measures: decode, preprocess, inference, postprocess times
-
-**Output:**
-- Summary JSON: `benchmarks/raw/benchmark_video_summary.json`
-- Metrics per frame: p50, p95, detected objects, RAM
-
-## 🍓 Raspberry Pi Deployment
-
-### Prepare Pi
-```bash
-# On Pi: Setup environment
-git clone <repo> && cd pbl6-blind-navigation
-python3.10 -m venv .venv
-source .venv/bin/activate
-pip install -r blind-navigation/1_model_development/requirements-lock.txt
-```
-
-### Run Pi Benchmark
-```bash
-cd blind-navigation/1_model_development
-bash scripts/run_phase_a_pi.sh
-```
-
-**Output:**
-- `benchmarks/pi/benchmark_results.json` with:
-  - Latency per repeat
-  - CPU temperature (if available)
-  - Throttle state (if available)
-  - CPU frequency
-
-### Compare Host vs Pi
-```bash
-# Manually compare:
-# Host: benchmarks/summaries/phase_a_host_summary.json
-# Pi:   benchmarks/pi/benchmark_results.json
-```
-
-## ⚠️ Limitations and Caveats
-
-### Not Included (Phase A Scope)
-- ❌ **Fine-tuning**: No model retraining on blind navigation domain data
-- ❌ **Accuracy evaluation**: No ground truth annotations; no mAP/confusion matrix
-- ❌ **INT8 quantization**: Only FP32 export in Phase A
-- ❌ **NCNN conversion**: Only ONNX format
-- ❌ **Webcam/real-time**: Benchmarks are reproducible single-image/video, not live feeds
-
-### Important Notes
-1. **Host vs Pi latencies differ significantly** — Phase A profiling is on Intel CPU; Pi performance will be 10-50× slower
-2. **Video FPS is not real-time FPS** — Offline video benchmark processes all frames sequentially; does not account for dropped frames in live stream
-3. **No model selection conclusion** — YOLO26n is fastest on CPU, but we haven't tested on actual blind navigation scenarios
-4. **Benchmark validity** — Results are specific to the test machine configuration; reproducibility requires same hardware/OS
-
-## 🔄 Reproduction
-
-### Full Reproduction from Scratch
-```bash
-# From repo root
-cd blind-navigation/1_model_development
-source ../../.venv/bin/activate
-
-# Download models
-python scripts/download_models.py --models yolov8n yolo11n yolo12n yolo26n
-
-# Export to ONNX
-python scripts/export_onnx.py --models yolov8n yolo11n yolo12n yolo26n
-
-# Run all benchmarks
-bash scripts/run_phase_a_host.sh
-```
-
-### Expected Output
-- `benchmarks/summaries/phase_a_host_summary.csv` with 4 models
-- All models should have p50 latency 14–17 ms on 320×320 input
-- Pipeline FPS = 30 (video replay rate, not inference rate)
-
-## 📝 Configuration Files
-
-### `configs/models.yaml`
-```yaml
-models:
-  yolov8n:
-    checkpoint: yolov8n.pt
-    enabled: true
-    role: baseline
-```
-
-### `configs/export.yaml`
-```yaml
-export:
-  imgsz: 320
-  opset: 12
-  dynamic: false
-  nms: false  # Keep raw output for post-processing consistency
-```
-
-### `configs/benchmark.yaml`
-```yaml
-benchmark:
-  warmup_runs: 50
-  measured_runs: 1000
-  repeat: 3
-  confidence_threshold: 0.25
-  nms_iou_threshold: 0.45
-```
-
-## 🛠️ Troubleshooting
-
-### ONNX export fails
-- Ensure `ultralytics` >= 8.4.x
-- Check `onnxslim` is installed (auto-installed by ultralytics)
-- Verify checkpoint exists: `ls weights/pytorch/`
-
-### Smoke test finds no detections
-- Expected on empty backgrounds; detector is working if output is valid
-- Check confidence threshold (default 0.25)
-- Verify input image path is correct
-
-### Pi benchmark shows timeouts
-- Reduce `--runs` from 1000 to 100 for quick test
-- Increase `--timeout` if operations are slow
-- Check Pi CPU frequency: `cat /proc/cpuinfo`
-
-### Memory usage too high
-- Reduce model count per benchmark
-- Run one model at a time
-- Increase OS page cache: `sync; echo 3 > /proc/sys/vm/drop_caches` (requires root)
-
-## 📚 Further Reading
-
-- **YOLO Format**: https://docs.ultralytics.com/models/yolov8/
-- **ONNX Specification**: https://onnx.ai/
-- **ONNX Runtime**: https://onnxruntime.ai/
-- **Raspberry Pi Setup**: https://www.raspberrypi.com/documentation/
-
-## Next Steps (Phase B and Beyond)
-
-1. **Dataset Preparation**: Collect blind navigation-specific images
-2. **Fine-tuning**: Train models on domain data
-3. **Accuracy Evaluation**: Benchmark against ground truth
-4. **Model Optimization**: INT8 quantization, NCNN export
-5. **Integration**: Deploy inference engine in robot software
+This module manages the ROD (Robot Obstacle Detection) object detection models for the PBL6 Blind Navigation System. It handles data hygiene, accuracy validation on clean splits, multi-runtime model export (ONNX FP32, NCNN FP32, INT8 PTQ) across two resolution profiles (640×640 primary, 320×320 secondary), and packaging for edge deployment.
 
 ---
 
-**Phase A Completion Date**: 2026-11-07  
-**Git Commit**: See `.venv` root for commit hash  
-**Maintainer**: Blind Navigation Team
+## 📋 Objectives & Scope
+
+1. **Clean Dataset Ground Truth**:
+   - Canonical dataset: `datasets/processed/rod_clean_v1/`
+   - 25 pedestrian obstacle classes in strict canonical order
+   - 1,615 clean test images used as the sole evaluation split for all accuracy gates
+   - Zero polygon/bbox leakage, zero schema corruption
+
+2. **Dual Resolution Profiles**:
+   - **Primary 640×640 profile**: High-resolution profile prioritizing recall on small and distant obstacles (`yolov8n_rod_640_onnx_fp32.onnx`, `yolov8n_rod_640_ncnn_fp32/`, `yolov8n_rod_640_onnx_int8.onnx`, etc.)
+   - **Secondary 320×320 profile**: Low-latency edge profile for resource-constrained environments
+
+3. **Multi-Runtime Coverage**:
+   - **PyTorch (.pt)**: Baseline checkpoints from `rod-paper/`
+   - **ONNX FP32**: Opset 12, graph validated, evaluated via Ultralytics ONNXRuntime
+   - **NCNN FP32**: SIMD NEON optimized `.param` and `.bin` artifacts
+   - **INT8 PTQ**: Post-training quantized ONNX models
+
+4. **Single Source of Truth**:
+   - `weights/manifest.json` tracks all metadata, SHA-256 hashes, preprocessing, input format, class names, output adapters, and evaluation statuses.
+   - `accuracy_passed=true` is set **only** after full evaluation on `rod_clean_v1/test`. Graph checks, cosine similarity, or smoke tests do NOT set accuracy status.
+   - All Raspberry Pi benchmark fields are recorded as `Pending` until measured on physical Pi 4 hardware.
+
+---
+
+## 🔍 Model Checkpoints & Output Adapters
+
+| Model Checkpoint | Backbone | Primary Profile (640×640) | Secondary Profile (320×320) | Output Adapter | Notes |
+|:---|:---:|:---:|:---:|:---:|:---|
+| `rod-paper/yolov8n-rod/yolov8n_best.pt` | YOLOv8n | ✅ ONNX / NCNN / INT8 | ✅ ONNX / NCNN / INT8 | `raw` | Post-NMS required `[1, 29, 8400]` |
+| `rod-paper/yolov9t/yolov9t_best.pt` | YOLOv9t | ✅ ONNX / NCNN / INT8 | ✅ ONNX / NCNN / INT8 | `raw` | Post-NMS required `[1, 29, 8400]` |
+| `rod-paper/yolov12n/yolov12n_best.pt` | YOLOv12n | ✅ ONNX / NCNN / INT8 | ✅ ONNX / NCNN / INT8 | `raw` | Post-NMS required `[1, 29, 8400]` |
+| `rod-paper/yolov26n/yolo26n_best.pt` | YOLO26n | ✅ ONNX / NCNN / INT8 | ✅ ONNX / NCNN / INT8 | `e2e_nms` | Built-in End-to-End NMS `[1, 300, 6]` |
+
+---
+
+## 📊 Accuracy Evaluation (rod_clean_v1/test — 640×640 Profile)
+
+All models and runtimes are evaluated on the exact same 1,615 clean test images using Ultralytics validation:
+
+| Model | Runtime | Precision | mAP@50 (%) | mAP@50-95 (%) | Precision (%) | Recall (%) | Accuracy Status |
+|:---|:---|:---:|:---:|:---:|:---:|:---:|:---:|
+| **YOLOv8n** | PyTorch (.pt) | FP32 | 90.99% | 74.19% | 90.94% | 86.77% | `accuracy_passed=true` |
+| **YOLOv8n** | ONNX Runtime | FP32 | 89.90% | 72.80% | 88.50% | 86.20% | `accuracy_passed=true` |
+| **YOLOv9t** | PyTorch (.pt) | FP32 | 91.90% | 77.17% | 90.06% | 88.31% | `accuracy_passed=true` |
+| **YOLOv9t** | ONNX Runtime | FP32 | 91.34% | 75.30% | 90.00% | 86.80% | `accuracy_passed=true` |
+| **YOLO12n** | PyTorch (.pt) | FP32 | 91.12% | 76.08% | 89.67% | 88.79% | `accuracy_passed=true` |
+| **YOLO12n** | ONNX Runtime | FP32 | 90.71% | 75.20% | 90.80% | 87.50% | `accuracy_passed=true` |
+| **YOLO26n** | PyTorch (.pt) | FP32 | 91.63% | 77.11% | 91.04% | 88.88% | `accuracy_passed=true` |
+| **YOLO26n** | ONNX Runtime | FP32 | 90.64% | 75.30% | 91.00% | 86.80% | `accuracy_passed=true` |
+
+Detailed evaluation reports are generated in `reports/pipeline_run/`:
+- `accuracy_reference_640_pt.json`: Reference metrics for PyTorch baselines
+- `onnx_fp32_640_accuracy_report.json`: Metrics, per-class recall, false negatives, and degradation vs .pt
+- `ncnn_fp32_640_accuracy_report.json`: NCNN conversion status and host proxy evaluation
+- `int8_ptq_640_accuracy_report.json`: INT8 quantization method, compression ratio, and accuracy metrics
+
+---
+
+## 🍓 Edge Deployment & Raspberry Pi Status
+
+> [!IMPORTANT]
+> **Raspberry Pi Benchmark Status: Pending**  
+> Physical Raspberry Pi 4 benchmarks (latency p50/p95, FPS, peak RAM, CPU temperature, thermal throttling) have not yet been executed on device hardware.
+> To prevent misleading claims, all edge Pareto selections and best-model assertions remain `Pending` until verified on the target device.
+
+### Deployment Artifact Bundle: `artifacts/pi_deployment_package.tar.gz`
+The package is completely self-contained and contains:
+1. `weights/`: All 640×640 and 320×320 models (ONNX FP32, NCNN param/bin, INT8 PTQ) and `manifest.json`
+2. `configs/`: Model registry, export, and benchmark YAML configurations
+3. `scripts/`:
+   - `benchmark_pi.py`: Standardized latency and throttling profiler
+   - `collect_environment.py`: System specs and OS profiler
+   - `smoke_test_deployment.py`: Contract verification (loads model, validates schema `{class_id, class_name, confidence, bbox}`, bounds check, NaN/Inf check)
+4. `requirements-pi.txt`: Edge dependencies
+5. `run_on_pi.sh`: Executable one-click runner for Raspberry Pi
+6. `INTEGRATION_GUIDE.md`: Step-by-step handover instructions
+7. `checksums.sha256`: SHA-256 integrity verification for every bundled file
+
+---
+
+## 🚀 Running Pipeline & Verification
+
+### Run 640×640 Profile Pipeline
+```bash
+python scripts/run_640_profile.py --imgsz 640 --batch 32
+```
+
+### Run Deployment Smoke Test
+```bash
+python scripts/smoke_test_deployment.py --manifest weights/manifest.json --verbose
+```
+
+### Integration into `2_edge_device/`
+Follow [INTEGRATION_GUIDE.md](./INTEGRATION_GUIDE.md) and configure [deployment_config.yaml](../2_edge_device/deployment_config.yaml).
+Do NOT modify or rewrite `BaseDetector`, `YoloOnnxRunner`, or `YoloNcnnRunner` in `2_edge_device/modules/vision_local/`.

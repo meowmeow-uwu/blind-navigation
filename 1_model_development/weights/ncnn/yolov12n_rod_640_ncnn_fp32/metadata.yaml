@@ -1,0 +1,44 @@
+description: Ultralytics YOLOv12n model trained on /kaggle/working/data.yaml
+author: Ultralytics
+date: "2026-11-11T11:52:51.818108+07:00"
+version: "8.4.208"
+license: AGPL-3.0 License (https://ultralytics.com/license)
+docs: https://docs.ultralytics.com
+stride: 32
+task: detect
+head: Detect
+batch: 1
+imgsz:
+- 640
+- 640
+names:
+  0: Bike
+  1: Building
+  2: Car
+  3: Person
+  4: Stairs
+  5: Traffic sign
+  6: Electrical Pole
+  7: Road
+  8: Motorcycle
+  9: Dustbin
+  10: Dog
+  11: Manhole
+  12: Tree
+  13: Guard rail
+  14: Pedestrian crosswalk
+  15: Truck
+  16: Bus
+  17: Bench
+  18: Traffic Cone
+  19: Fire hydrant
+  20: Teraffic Barrel
+  21: Plant Pot
+  22: Electrical Box
+  23: Chair
+  24: Bicycle Rack
+args:
+  batch: 1
+  quantize: null
+channels: 3
+end2end: false

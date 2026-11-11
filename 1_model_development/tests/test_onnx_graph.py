@@ -10,22 +10,40 @@ import pytest
 
 def get_onnx_models():
     """Get list of exported ONNX models."""
-    manifest_path = Path("weights/metadata/onnx_manifest.json")
-    if not manifest_path.exists():
-        pytest.skip("ONNX manifest not found - run export first")
+    candidates = [
+        Path("weights/manifest.json"),
+        Path("blind-navigation/1_model_development/weights/manifest.json"),
+        Path("weights/metadata/onnx_manifest.json"),
+    ]
+    manifest_path = None
+    for c in candidates:
+        if c.is_file():
+            manifest_path = c
+            break
+    
+    if not manifest_path:
+        return []
     
     with open(manifest_path) as f:
         manifest = json.load(f)
     
     models = []
-    for model_name, model_info in manifest["models"].items():
-        if model_info.get("graph_valid"):
-            models.append((model_name, Path(model_info["path"])))
-    
-    if not models:
-        pytest.skip("No valid ONNX models found")
-    
+    for model_name, model_info in manifest.get("models", {}).items():
+        if isinstance(model_info, dict):
+            for k, v in model_info.items():
+                if isinstance(v, dict) and str(k).startswith("onnx_fp32_320"):
+                    p_str = v.get("path_relative") or v.get("path")
+                    if p_str:
+                        p = Path(p_str)
+                        if not p.is_file():
+                            p = manifest_path.parent.parent / p_str
+                        if p.is_file():
+                            models.append((f"{model_name}_{k}", p))
     return models
+
+
+ONNX_MODELS = get_onnx_models()
+SKIP_REASON = "No ONNX 320 models found for graph testing"
 
 
 @pytest.mark.parametrize("model_name,onnx_path", get_onnx_models())

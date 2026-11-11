@@ -1,0 +1,142 @@
+# PBL6 Blind Navigation — Edge Deployment Configuration
+# Source of truth for 2_edge_device integration.
+# Select artifact path and imgsz from weights/manifest.json.
+#
+# IMPORTANT: Before using any artifact:
+#   1. Verify SHA-256 against manifest.json.
+#   2. Confirm accuracy_passed=true in manifest.json for the chosen artifact.
+#   3. Copy/symlink models to modules/vision_local/models/.
+#   4. Run smoke_test_deployment.py before connecting a webcam.
+
+project: pbl6-blind-navigation
+module: 2_edge_device
+manifest_ref: "1_model_development/weights/manifest.json"
+
+# ── Default model selection ──────────────────────────────────────────────────
+# Change these to switch between models/resolutions.
+# "auto" means the YoloOnnxRunner or YoloNcnnRunner will infer from the file.
+default_model: yolov8n
+default_backend: onnx          # onnx | ncnn
+default_imgsz: 640             # 640 | 320
+
+# ── ONNX Backend ─────────────────────────────────────────────────────────────
+onnx:
+  model_dir: modules/vision_local/models/onnx
+  providers:
+    - CPUExecutionProvider     # Default for Raspberry Pi
+    # Uncomment for GPU host testing:
+    # - CUDAExecutionProvider
+  # Files are named: {model}_rod_{imgsz}_onnx_fp32.onnx
+  # e.g. yolov8n_rod_640_onnx_fp32.onnx
+  profiles:
+    "640":
+      yolov8n:  yolov8n_rod_640_onnx_fp32.onnx
+      yolov9t:  yolov9t_rod_640_onnx_fp32.onnx
+      yolov12n: yolov12n_rod_640_onnx_fp32.onnx
+      yolov26n: yolov26n_rod_640_onnx_fp32.onnx
+    "320":
+      yolov8n:  yolov8n_320_fp32.onnx
+      yolov9t:  yolov9t_320_fp32.onnx
+      yolov12n: yolov12n_320_fp32.onnx
+      yolov26n: yolo26n_320_fp32.onnx
+
+# ── NCNN Backend ─────────────────────────────────────────────────────────────
+ncnn:
+  model_dir: modules/vision_local/models/ncnn
+  num_threads: 4               # Raspberry Pi 4 Cortex-A72 (4 cores)
+  use_vulkan: false            # Pi 4 GPU not suitable for inference
+  # Directories are named: {model}_rod_{imgsz}_ncnn_fp32/
+  # Param: model.ncnn.param  Bin: model.ncnn.bin
+  profiles:
+    "640":
+      yolov8n:  yolov8n_rod_640_ncnn_fp32
+      yolov9t:  yolov9t_rod_640_ncnn_fp32
+      yolov12n: yolov12n_rod_640_ncnn_fp32
+      yolov26n: yolov26n_rod_640_ncnn_fp32
+    "320":
+      yolov8n:  yolov8n_ncnn_fp32
+      yolov9t:  yolov9t_ncnn_fp32
+      yolov12n: yolov12n_ncnn_fp32
+      yolov26n: yolov26n_ncnn_fp32
+
+# ── INT8 PTQ Backend ─────────────────────────────────────────────────────────
+int8:
+  model_dir: modules/vision_local/models/int8
+  profiles:
+    "640":
+      yolov8n:  yolov8n_rod_640_onnx_int8.onnx
+      yolov9t:  yolov9t_rod_640_onnx_int8.onnx
+      yolov12n: yolov12n_rod_640_onnx_int8.onnx
+      yolov26n: yolov26n_rod_640_onnx_int8.onnx
+    "320":
+      yolov8n:  yolov8n_320_int8.onnx
+      yolov9t:  yolov9t_320_int8.onnx
+      yolov12n: yolov12n_320_int8.onnx
+      yolov26n: yolov26n_320_int8.onnx
+
+# ── Inference Config ─────────────────────────────────────────────────────────
+inference:
+  confidence_threshold: 0.25
+  nms_iou_threshold: 0.45
+
+# ── Output Schema ────────────────────────────────────────────────────────────
+# Every detector (ONNX or NCNN) must return a list of dicts:
+#   {
+#     "class_id":   int,         # 0-24 (ROD 25-class index)
+#     "class_name": str,         # e.g. "Person"
+#     "confidence": float,       # 0.0 – 1.0
+#     "bbox":       [x1, y1, x2, y2]  # pixel coordinates in original image
+#   }
+
+# ── Class Labels (25 ROD classes, exact order) ───────────────────────────────
+classes:
+  - Bike
+  - Building
+  - Car
+  - Person
+  - Stairs
+  - Traffic sign
+  - Electrical Pole
+  - Road
+  - Motorcycle
+  - Dustbin
+  - Dog
+  - Manhole
+  - Tree
+  - Guard rail
+  - Pedestrian crosswalk
+  - Truck
+  - Bus
+  - Bench
+  - Traffic Cone
+  - Fire hydrant
+  - Teraffic Barrel
+  - Plant Pot
+  - Electrical Box
+  - Chair
+  - Bicycle Rack
+
+# ── Output Adapters ──────────────────────────────────────────────────────────
+output_adapters:
+  raw:
+    models: [yolov8n, yolov9t, yolov12n]
+    description: >
+      Raw YOLO output [1, num_classes+4, num_boxes].
+      Requires NMS postprocessing. YoloOnnxRunner handles this automatically.
+  e2e_nms:
+    models: [yolov26n]
+    description: >
+      End-to-end NMS output [1, max_dets, 6] — [x1,y1,x2,y2,conf,cls_id].
+      No additional NMS required. OnnxDetector adapter="e2e_nms".
+
+# ── Raspberry Pi Deployment Notes ────────────────────────────────────────────
+raspberry_pi:
+  status: Pending
+  note: >
+    Pi 4 benchmark latency/FPS/temperature data has NOT been collected.
+    All Pi fields in manifest.json are marked Pending.
+    Run scripts/benchmark_pi.py on the actual Pi 4 hardware.
+  recommended_start: >
+    Use 320x320 ONNX FP32 or INT8 for first Pi deployment
+    (lower latency, same 25-class ROD output). Switch to 640 if recall
+    on small objects is insufficient after on-device testing.

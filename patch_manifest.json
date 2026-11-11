@@ -1,72 +1,72 @@
 {
-  "generated_at": "2026-11-10T09:16:16.767036Z",
-  "source_dataset": "datasets/raw/ROD-Dataset/dataset",
-  "processed_dataset": "datasets/processed/rod_detection_v1",
+  "generated_at": "2026-11-11T08:44:06.519647Z",
+  "source_dataset": "/tmp/pytest-of-dutai/pytest-3/test_pipeline_on_synthetic_dat0/raw/ROD-Dataset",
+  "processed_dataset": "/tmp/pytest-of-dutai/pytest-3/test_pipeline_on_synthetic_dat0/processed/rod_detection_v1",
   "file_counts": {
-    "detection_only": 19647,
-    "segmentation_only": 4547,
-    "mixed": 33,
-    "empty": 99,
+    "detection_only": 1,
+    "segmentation_only": 1,
+    "mixed": 1,
+    "empty": 0,
     "invalid": 0,
-    "total": 24326
+    "total": 3
   },
   "instance_counts": {
-    "polygons_converted": 5138,
-    "detection_lines_preserved": 35057,
+    "polygons_converted": 2,
+    "detection_lines_preserved": 2,
     "invalid_lines": 0,
-    "total_final_instances": 40195
+    "total_final_instances": 4
   },
   "split_statistics": {
     "train": {
-      "images": 19186,
-      "total_files": 19186,
-      "detection_only": 15659,
-      "segmentation_only": 3420,
-      "mixed": 24,
-      "empty": 83,
+      "images": 1,
+      "total_files": 1,
+      "detection_only": 1,
+      "segmentation_only": 0,
+      "mixed": 0,
+      "empty": 0,
       "invalid": 0,
-      "polygons_converted": 3915,
-      "detection_lines_preserved": 28336,
+      "polygons_converted": 0,
+      "detection_lines_preserved": 1,
       "invalid_lines": 0,
-      "final_instances": 32251
+      "final_instances": 1
     },
     "valid": {
-      "images": 3511,
-      "total_files": 3511,
-      "detection_only": 2757,
-      "segmentation_only": 735,
-      "mixed": 8,
-      "empty": 11,
+      "images": 1,
+      "total_files": 1,
+      "detection_only": 0,
+      "segmentation_only": 1,
+      "mixed": 0,
+      "empty": 0,
       "invalid": 0,
-      "polygons_converted": 808,
-      "detection_lines_preserved": 4764,
+      "polygons_converted": 1,
+      "detection_lines_preserved": 0,
       "invalid_lines": 0,
-      "final_instances": 5572
+      "final_instances": 1
     },
     "test": {
-      "images": 1629,
-      "total_files": 1629,
-      "detection_only": 1231,
-      "segmentation_only": 392,
+      "images": 1,
+      "total_files": 1,
+      "detection_only": 0,
+      "segmentation_only": 0,
       "mixed": 1,
-      "empty": 5,
+      "empty": 0,
       "invalid": 0,
-      "polygons_converted": 415,
-      "detection_lines_preserved": 1957,
+      "polygons_converted": 1,
+      "detection_lines_preserved": 1,
       "invalid_lines": 0,
-      "final_instances": 2372
+      "final_instances": 2
     }
   },
   "invalid_rows_logged": [],
   "checksums": {
-    "source_labels_manifest_sha256": "f2b25935960a7e9c25ab715dd6cb1477f876537029848b6d79c0551ea21eb3aa",
-    "output_labels_manifest_sha256": "87cd111cfd533999a0cdc9e173397d5466603c137726cba35bae8a15ffedbeb7",
-    "total_files_audited": 24326
+    "source_labels_manifest_sha256": "18f45abbcde3b1ea7456f8691ae0cf85d4e336864984bc694ca9c26c5f6cec53",
+    "output_labels_manifest_sha256": "d97f974f5ac2475e714ab502565b37d19522aa404ce93b955862f762fac41b38",
+    "total_files_audited": 3
   },
   "img_20781_txt_change": {
     "split": "test",
     "rel_path": "test/labels/IMG_20781.txt",
-    "source_sha256": "0337716ecfe7e3d422c9ff0df87d794de6ac6c8f5ed23d13464e3dec99dcc3ec",
+    "source_sha256": "c66252bff6bd21d76a4ac7652554da9aab4afb18d38bb052e775dea99473d422",
     "output_sha256": "4eded4ca74e2da81034b87fa64cd2fbf8d30deab9ffe3bbf9648bab1db1b7576",
     "raw_lines": [
       "14 0.56953125 0.4796875 0.01953125 0.0390625",
@@ -92,6 +92,6 @@
       }
     ]
   },
-  "schema_audit_csv": "datasets/manifests/rod_label_schema_audit.csv",
+  "schema_audit_csv": "/tmp/pytest-of-dutai/pytest-3/test_pipeline_on_synthetic_dat0/manifests/rod_label_schema_audit.csv",
   "status": "clean"
 }
