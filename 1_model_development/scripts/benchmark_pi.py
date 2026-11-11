@@ -19,6 +19,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+import cv2
 import onnx
 import onnx.checker
 import onnxruntime as ort
@@ -31,7 +32,7 @@ except ImportError:
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from models.onnx_detector import ONNXDetector
+from models.onnx_detector import ONNXDetector, preprocess
 
 
 def sha256_file(path: Path) -> str:
@@ -132,9 +133,16 @@ def run_preflight(
         try:
             with open(manifest_path) as f:
                 man = json.load(f)
-            model_stem = onnx_path.stem.replace(f"_{expected_size}_fp32", "")
+            model_stem = onnx_path.stem.replace(
+                f"_{expected_size}_fp32", ""
+            ).replace(f"_{expected_size}_int8", "")
             if model_stem in man["models"]:
-                exp_sha = man["models"][model_stem].get(f"onnx_fp32_{expected_size}", {}).get("sha256")
+                manifest_key = (
+                    f"int8_ptq_{expected_size}"
+                    if onnx_path.stem.endswith("_int8")
+                    else f"onnx_fp32_{expected_size}"
+                )
+                exp_sha = man["models"][model_stem].get(manifest_key, {}).get("sha256")
                 if exp_sha and exp_sha != model_sha:
                     preflight["errors"].append(f"SHA-256 mismatch: expected {exp_sha[:12]}, got {model_sha[:12]}")
                     preflight["status"] = "failed"
@@ -188,6 +196,7 @@ def run_benchmark_for_model(
             "status": "invalid",
             "preflight": preflight,
             "error": "Preflight checks failed",
+            "timing_scope": "onnx_runtime_inference_only",
             "repeats": [],
         }
 
@@ -195,7 +204,20 @@ def run_benchmark_for_model(
     opts.intra_op_num_threads = num_threads
     opts.inter_op_num_threads = 1
 
-    detector = ONNXDetector(str(onnx_path))
+    detector = ONNXDetector(str(onnx_path), session_options=opts)
+    image = cv2.imread(str(image_path))
+    if image is None:
+        raise ValueError(f"Failed to read image: {image_path}")
+    input_tensor, _, _ = preprocess(
+        image, (detector.input_height, detector.input_width)
+    )
+
+    def infer():
+        return detector.session.run(
+            [detector.output_name],
+            {detector.input_name: input_tensor},
+        )
+
     git_commit = get_git_commit()
 
     repeat_summaries = []
@@ -207,7 +229,7 @@ def run_benchmark_for_model(
         # Warmup
         for _ in range(warmup_runs):
             try:
-                detector.predict(str(image_path), conf=0.25, iou=0.45)
+                infer()
             except Exception:
                 pass
 
@@ -222,7 +244,7 @@ def run_benchmark_for_model(
         for iter_idx in range(measured_runs):
             t0 = time.perf_counter()
             try:
-                dets = detector.predict(str(image_path), conf=0.25, iou=0.45)
+                infer()
             except Exception:
                 continue
             lat = (time.perf_counter() - t0) * 1000.0
@@ -308,6 +330,7 @@ def run_benchmark_for_model(
         "stability_warning": stability_warning,
         "preflight": preflight,
         "git_commit": git_commit,
+        "timing_scope": "onnx_runtime_inference_only",
         "repeats": repeat_summaries,
     }
 
@@ -315,8 +338,10 @@ def run_benchmark_for_model(
 def main():
     parser = argparse.ArgumentParser(description="Hardened Raspberry Pi ONNX Benchmark Harness")
     parser.add_argument("--models", nargs="+", default=["yolov8n", "yolo11n", "yolo12n", "yolo26n"])
+    parser.add_argument("--precision", choices=["fp32", "int8"], default="fp32")
     parser.add_argument("--images", type=Path, default=Path("assets/export_validation"))
     parser.add_argument("--onnx-dir", type=Path, default=Path("weights/onnx"))
+    parser.add_argument("--int8-dir", type=Path, default=Path("weights/int8"))
     parser.add_argument("--warmup", type=int, default=5)
     parser.add_argument("--runs", type=int, default=20)
     parser.add_argument("--repeat", type=int, default=1)
@@ -343,10 +368,12 @@ def main():
     print(f"Threads: {args.threads}, Warmup: {args.warmup}, Runs: {args.runs}, Repeat: {args.repeat}\n")
 
     for model_name in args.models:
-        onnx_file = args.onnx_dir / f"{model_name}_{args.input_size}_fp32.onnx"
-        print(f"Running model: {model_name}...")
+        model_dir = args.onnx_dir if args.precision == "fp32" else args.int8_dir
+        onnx_file = model_dir / f"{model_name}_{args.input_size}_{args.precision}.onnx"
+        run_name = f"{model_name}_onnx_{args.precision}_{args.input_size}"
+        print(f"Running model: {run_name}...")
         res = run_benchmark_for_model(
-            model_name,
+            run_name,
             onnx_file,
             test_image,
             args.warmup,
@@ -357,7 +384,7 @@ def main():
             args.manifest,
             args.output,
         )
-        all_results[model_name] = res
+        all_results[run_name] = res
 
         print(f"  Status: {res['status']}")
         for rep in res["repeats"]:
