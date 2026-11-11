@@ -112,6 +112,27 @@ def artifact_stem(model: str, imgsz: int, runtime: str, precision: str) -> str:
     return f"{model}_rod_{imgsz}_{runtime}_{precision}"
 
 
+def _cached_320_artifact(model: str, artifact_key: str) -> Path | None:
+    manifest_path = WEIGHTS_DIR / "manifest.json"
+    if not manifest_path.is_file():
+        return None
+    manifest = json.loads(manifest_path.read_text())
+    entry = manifest.get("models", {}).get(model, {}).get(artifact_key, {})
+    if entry.get("imgsz") != 320:
+        return None
+    relative_path = entry.get("path_relative") or entry.get("path")
+    if not relative_path:
+        return None
+    candidate = (MODEL_DEV_ROOT / relative_path).resolve()
+    weights_root = WEIGHTS_DIR.resolve()
+    if weights_root not in candidate.parents or not candidate.is_file():
+        return None
+    expected_hash = entry.get("sha256")
+    if expected_hash and sha256_file(candidate) != expected_hash:
+        raise ValueError(f"Cached 320 artifact hash mismatch: {candidate}")
+    return candidate
+
+
 def _eval_yaml(clean_dataset_dir: Path) -> Path:
     p = clean_dataset_dir / "eval_clean_test.yaml"
     if not p.exists():
@@ -147,6 +168,8 @@ def _run_ultralytics_val(
             imgsz=imgsz,
             batch=val_batch,
             device=val_device,
+            conf=0.001,
+            iou=0.7,
             plots=False,
             save_json=False,
             verbose=False,
@@ -159,6 +182,8 @@ def _run_ultralytics_val(
             imgsz=imgsz,
             batch=1,
             device="cpu",
+            conf=0.001,
+            iou=0.7,
             plots=False,
             save_json=False,
             verbose=False,
@@ -170,39 +195,50 @@ def _run_ultralytics_val(
     per_class_recall: dict[str, float] = {}
     per_class_fn: dict[str, int] = {}
 
-    if hasattr(box, "ap50") and box.ap50 is not None:
-        for i, cls in enumerate(ROD_CLASSES):
-            if i < len(box.ap50):
-                per_class_ap50[cls] = round(float(box.ap50[i]), 6)
+    class_indices = list(getattr(box, "ap_class_index", []))
+    for cls in ROD_CLASSES:
+        per_class_recall[cls] = None
+    if getattr(box, "ap50", None) is not None:
+        for i, class_index in enumerate(class_indices):
+            if i < len(box.ap50) and class_index < len(ROD_CLASSES):
+                per_class_ap50[ROD_CLASSES[class_index]] = round(float(box.ap50[i]), 6)
+    if getattr(box, "r", None) is not None:
+        for i, class_index in enumerate(class_indices):
+            if i < len(box.r) and class_index < len(ROD_CLASSES):
+                per_class_recall[ROD_CLASSES[class_index]] = round(float(box.r[i]), 6)
 
-    if hasattr(box, "r") and box.r is not None:
-        for i, cls in enumerate(ROD_CLASSES):
-            if i < len(box.r):
-                per_class_recall[cls] = round(float(box.r[i]), 6)
+    target_counts = np.asarray(getattr(res, "nt_per_class", []), dtype=int)
+    if target_counts.size:
+        for i, class_index in enumerate(class_indices):
+            if i < len(box.r) and class_index < len(target_counts):
+                gt_count = int(target_counts[class_index])
+                tp_count = round(float(box.r[i]) * gt_count)
+                per_class_fn[ROD_CLASSES[class_index]] = max(0, gt_count - tp_count)
 
-    if hasattr(box, "nt") and box.nt is not None and hasattr(box, "r") and box.r is not None:
-        for i, cls in enumerate(ROD_CLASSES):
-            if i < len(box.nt) and i < len(box.r):
-                gt_count = int(box.nt[i])
-                tp_approx = round(float(box.r[i]) * gt_count)
-                per_class_fn[cls] = max(0, gt_count - tp_approx)
-
-    ap_small = None
-    if hasattr(box, "maps") and box.maps is not None and len(box.maps) >= 1:
-        try:
-            ap_small = round(float(box.maps[0]), 6)
-        except Exception:
-            pass
+    critical_names = set(
+        (yaml.safe_load((MODEL_DEV_ROOT / "configs" / "danger_classes.yaml").read_text())
+         or {}).get("groups", {}).get("critical", {}).get("classes", [])
+    )
+    critical_recalls = [
+        value for cls, value in per_class_recall.items()
+        if cls in critical_names and value is not None
+    ]
+    dangerous_macro_recall = round(float(np.mean(critical_recalls)), 6) if critical_recalls else None
+    false_negative_count = sum(per_class_fn.values()) if per_class_fn else None
 
     return {
         "mAP50": round(float(box.map50), 6),
         "mAP50_95": round(float(box.map), 6),
         "precision": round(float(box.mp), 6),
         "recall": round(float(box.mr), 6),
-        "ap_small": ap_small,
+        "ap_small": None,
+        "ap_small_status": "not_provided_by_ultralytics_val",
         "per_class_ap50": per_class_ap50,
         "per_class_recall": per_class_recall,
         "per_class_false_negatives": per_class_fn,
+        "false_negatives": false_negative_count,
+        "false_negative_definition": "estimated from ground-truth counts and rounded per-class recall at Ultralytics' selected F1 confidence",
+        "dangerous_class_macro_recall": dangerous_macro_recall,
         "eval_duration_sec": duration,
     }
 
@@ -251,21 +287,25 @@ def step_b_export_onnx(pt_baselines: dict, imgsz: int, batch: int, device: str) 
     for mname, cfg in ROD_MODELS.items():
         ckpt = cfg["checkpoint"]
         stem = artifact_stem(mname, imgsz, "onnx", "fp32")
-        out_path = onnx_dir / f"{stem}.onnx"
+        out_path = (
+            _cached_320_artifact(mname, "onnx_fp32_320") if imgsz == 320 else None
+        ) or (onnx_dir / f"{stem}.onnx")
 
-        print(f"\n  [{mname}] Exporting ONNX FP32 → {out_path.name}")
-        mdl = YOLO(str(ckpt))
-        t0 = time.time()
-        exported = mdl.export(
-            format="onnx", imgsz=imgsz, batch=1, dynamic=False,
-            simplify=True, opset=12, half=False, int8=False, nms=False, device="cpu"
-        )
-        exp_time = round(time.time() - t0, 2)
-        exp_path = Path(exported)
-        if exp_path.resolve() != out_path.resolve():
-            if out_path.exists():
-                out_path.unlink()
-            shutil.move(str(exp_path), str(out_path))
+        exp_time = 0.0
+        if out_path.exists():
+            print(f"\n  [{mname}] Reusing existing ONNX FP32 → {out_path.name}")
+        else:
+            print(f"\n  [{mname}] Exporting ONNX FP32 → {out_path.name}")
+            mdl = YOLO(str(ckpt))
+            t0 = time.time()
+            exported = mdl.export(
+                format="onnx", imgsz=imgsz, batch=1, dynamic=False,
+                simplify=True, opset=12, half=False, int8=False, nms=False, device="cpu"
+            )
+            exp_time = round(time.time() - t0, 2)
+            exp_path = Path(exported)
+            if exp_path.resolve() != out_path.resolve():
+                shutil.move(str(exp_path), str(out_path))
 
         # Graph check (necessary but NOT sufficient for accuracy_passed)
         onnx_m = onnx.load(str(out_path))
@@ -415,9 +455,13 @@ def step_d_int8_ptq(pt_baselines: dict, imgsz: int, batch: int, device: str) -> 
 
     for mname, cfg in ROD_MODELS.items():
         ckpt = cfg["checkpoint"]
-        src_onnx = WEIGHTS_DIR / "onnx" / f"{artifact_stem(mname, imgsz, 'onnx', 'fp32')}.onnx"
+        src_onnx = (
+            _cached_320_artifact(mname, "onnx_fp32_320") if imgsz == 320 else None
+        ) or (WEIGHTS_DIR / "onnx" / f"{artifact_stem(mname, imgsz, 'onnx', 'fp32')}.onnx")
         stem_int8 = artifact_stem(mname, imgsz, "onnx", "int8")
-        out_int8 = int8_dir / f"{stem_int8}.onnx"
+        out_int8 = (
+            _cached_320_artifact(mname, "int8_ptq_320") if imgsz == 320 else None
+        ) or (int8_dir / f"{stem_int8}.onnx")
 
         if not src_onnx.exists():
             raise FileNotFoundError(
@@ -425,21 +469,25 @@ def step_d_int8_ptq(pt_baselines: dict, imgsz: int, batch: int, device: str) -> 
                 "Run STEP B first."
             )
 
-        print(f"\n  [{mname}] INT8 PTQ → {out_int8.name}")
-        mdl = YOLO(str(ckpt))
-        ptq_method = "onnxruntime_dynamic"
-        try:
-            exported_int8 = mdl.export(
-                format="onnx", imgsz=imgsz, int8=True,
-                data=str(data_yaml.resolve()), device="cpu",
-            )
-            exp_path = Path(exported_int8)
-            if exp_path.resolve() != out_int8.resolve():
-                shutil.copy2(str(exp_path), str(out_int8))
-            ptq_method = "ultralytics_ptq_calibration"
-        except Exception as e:
-            print(f"  Fallback to dynamic quantization ({e})")
-            quantize_dynamic(str(src_onnx), str(out_int8), weight_type=QuantType.QInt8)
+        if out_int8.exists():
+            print(f"\n  [{mname}] Reusing existing INT8 PTQ → {out_int8.name}")
+            ptq_method = "reused_existing_artifact"
+        else:
+            print(f"\n  [{mname}] INT8 PTQ → {out_int8.name}")
+            mdl = YOLO(str(ckpt))
+            ptq_method = "onnxruntime_dynamic"
+            try:
+                exported_int8 = mdl.export(
+                    format="onnx", imgsz=imgsz, int8=True,
+                    data=str(data_yaml.resolve()), device="cpu",
+                )
+                exp_path = Path(exported_int8)
+                if exp_path.resolve() != out_int8.resolve():
+                    shutil.copy2(str(exp_path), str(out_int8))
+                ptq_method = "ultralytics_ptq_calibration"
+            except Exception as e:
+                print(f"  Fallback to dynamic quantization ({e})")
+                quantize_dynamic(str(src_onnx), str(out_int8), weight_type=QuantType.QInt8)
 
         # Sanity run (necessary but NOT accuracy_passed)
         sess = ort.InferenceSession(str(out_int8), providers=["CPUExecutionProvider"])
@@ -478,6 +526,56 @@ def step_d_int8_ptq(pt_baselines: dict, imgsz: int, batch: int, device: str) -> 
     }, indent=2))
     print(f"\n✓ INT8 PTQ-{imgsz} report → {out_file}")
     return all_res
+
+
+def _write_320_comparison(pt_results: dict, onnx_results: dict, int8_results: dict) -> Path:
+    def metric_values(result: dict) -> dict:
+        return result.get("accuracy", result)
+
+    def metric_delta(left: dict, right: dict) -> dict:
+        scalar_keys = (
+            "mAP50", "mAP50_95", "precision", "recall", "ap_small",
+            "false_negatives", "dangerous_class_macro_recall",
+        )
+        delta = {}
+        for key in scalar_keys:
+            left_value, right_value = left.get(key), right.get(key)
+            delta[key] = round(right_value - left_value, 6) if isinstance(left_value, (int, float)) and isinstance(right_value, (int, float)) else None
+        for key in ("per_class_recall", "per_class_false_negatives"):
+            left_values, right_values = left.get(key, {}), right.get(key, {})
+            delta[key] = {
+                cls: round(right_values[cls] - left_values[cls], 6)
+                for cls in left_values.keys() & right_values.keys()
+                if isinstance(left_values[cls], (int, float)) and isinstance(right_values[cls], (int, float))
+            }
+        return delta
+
+    models = {}
+    for model_name in ROD_MODELS:
+        pt = metric_values(pt_results[model_name])
+        onnx = metric_values(onnx_results[model_name])
+        int8 = metric_values(int8_results[model_name])
+        models[model_name] = {
+            "metrics": {"pt_320": pt, "onnx_fp32_320": onnx, "onnx_int8_ptq_320": int8},
+            "degradation": {
+                "onnx_fp32_320_minus_pt_320": metric_delta(pt, onnx),
+                "int8_320_minus_onnx_fp32_320": metric_delta(onnx, int8),
+                "int8_320_minus_pt_320": metric_delta(pt, int8),
+            },
+        }
+
+    report_path = REPORTS_DIR / "profile_comparison_320.json"
+    report_path.write_text(json.dumps({
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "imgsz": 320,
+        "dataset": "rod_clean_v1/test",
+        "test_images": 1615,
+        "evaluator": "Ultralytics model.val",
+        "validation_thresholds": {"conf": 0.001, "iou": 0.7},
+        "models": models,
+    }, indent=2))
+    print(f"\n✓ 320 comparison report → {report_path}")
+    return report_path
 
 
 # ── STEP E ─────────────────────────────────────────────────────────────────────
@@ -697,7 +795,7 @@ def step_f_package_deployment() -> Path:
 
 # ── MAIN ───────────────────────────────────────────────────────────────────────
 def main() -> None:
-    parser = argparse.ArgumentParser(description="640x640 ROD export+accuracy pipeline")
+    parser = argparse.ArgumentParser(description="ROD profile export and accuracy pipeline")
     parser.add_argument("--imgsz", type=int, default=640)
     parser.add_argument("--batch", type=int, default=16)
     parser.add_argument("--skip-export", action="store_true")
@@ -714,10 +812,18 @@ def main() -> None:
 
     pt_baselines = step_a_evaluate_pt_baseline(imgsz, batch, device)
 
-    if not args.skip_export:
+    if imgsz == 320:
+        print("\n320 evaluation-only mode: NCNN, manifest updates, and Pi packaging are disabled.")
+        onnx_res = step_b_export_onnx(pt_baselines, imgsz, batch, device)
+        int8_res = step_d_int8_ptq(pt_baselines, imgsz, batch, device)
+        _write_320_comparison(pt_baselines, onnx_res, int8_res)
+    elif not args.skip_export:
         onnx_res = step_b_export_onnx(pt_baselines, imgsz, batch, device)
         ncnn_res = step_c_convert_ncnn(pt_baselines, imgsz, batch, device)
         int8_res = step_d_int8_ptq(pt_baselines, imgsz, batch, device)
+        step_e_update_manifest(pt_baselines, onnx_res, ncnn_res, int8_res)
+        if not args.skip_package:
+            step_f_package_deployment()
     else:
         def _load(name: str) -> dict:
             p = REPORTS_DIR / name
@@ -725,11 +831,9 @@ def main() -> None:
         onnx_res = _load(f"onnx_fp32_{imgsz}_accuracy_report.json")
         ncnn_res = _load(f"ncnn_fp32_{imgsz}_accuracy_report.json")
         int8_res = _load(f"int8_ptq_{imgsz}_accuracy_report.json")
-
-    step_e_update_manifest(pt_baselines, onnx_res, ncnn_res, int8_res)
-
-    if not args.skip_package:
-        step_f_package_deployment()
+        step_e_update_manifest(pt_baselines, onnx_res, ncnn_res, int8_res)
+        if not args.skip_package:
+            step_f_package_deployment()
 
     print(f"\n{'='*70}\nPIPELINE COMPLETE — {round(time.time()-t0, 1)}s\n{'='*70}")
 
