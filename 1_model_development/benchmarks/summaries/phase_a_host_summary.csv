@@ -1,0 +1,5 @@
+model,backend,precision,input_size,model_only_p50_ms,model_only_p95_ms,video_p50_ms,video_p95_ms,pipeline_fps,peak_ram_mb,status
+yolov8n,onnxruntime,fp32,320,16.296,17.082,18.095,19.158,30.0,138.7,validated
+yolo11n,onnxruntime,fp32,320,15.584,16.752,17.185,18.026,30.0,142.9,validated
+yolo12n,onnxruntime,fp32,320,17.276,18.507,18.902,19.992,30.0,143.1,validated
+yolo26n,onnxruntime,fp32,320,14.355,15.602,15.754,17.834,30.0,140.7,validated

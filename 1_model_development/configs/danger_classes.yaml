@@ -1,0 +1,88 @@
+# Functional and safety groupings for ROD-Dataset evaluation
+
+groups:
+  shared_coco:
+    description: "Classes shared between ROD and COCO with exact semantics"
+    classes:
+      - Bike
+      - Car
+      - Person
+      - Motorcycle
+      - Dog
+      - Truck
+      - Bus
+      - Bench
+      - Fire hydrant
+      - Plant Pot
+      - Chair
+
+  domain_only:
+    description: "Specialized assistive navigation classes not present in standard COCO"
+    classes:
+      - Building
+      - Stairs
+      - Traffic sign
+      - Electrical Pole
+      - Road
+      - Dustbin
+      - Manhole
+      - Tree
+      - Guard rail
+      - Pedestrian crosswalk
+      - Traffic Cone
+      - Teraffic Barrel
+      - Electrical Box
+      - Bicycle Rack
+
+  critical:
+    description: "Obstacles posing high collision or fall hazards for visually impaired pedestrians"
+    classes:
+      - Person
+      - Bike
+      - Car
+      - Motorcycle
+      - Truck
+      - Bus
+      - Stairs
+      - Manhole
+      - Electrical Pole
+
+  dynamic:
+    description: "Moving obstacles requiring rapid reaction and tracking"
+    classes:
+      - Person
+      - Bike
+      - Car
+      - Motorcycle
+      - Dog
+      - Truck
+      - Bus
+
+  static:
+    description: "Fixed urban furniture and infrastructure obstacles"
+    classes:
+      - Building
+      - Stairs
+      - Traffic sign
+      - Electrical Pole
+      - Road
+      - Dustbin
+      - Tree
+      - Guard rail
+      - Pedestrian crosswalk
+      - Bench
+      - Traffic Cone
+      - Fire hydrant
+      - Teraffic Barrel
+      - Plant Pot
+      - Electrical Box
+      - Chair
+      - Bicycle Rack
+
+  surface_hazard:
+    description: "Ground-level hazards causing trips, slips, or falls"
+    classes:
+      - Stairs
+      - Manhole
+      - Road
+      - Pedestrian crosswalk

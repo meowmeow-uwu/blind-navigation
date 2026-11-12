@@ -1,0 +1,22 @@
+{
+  "name": "yolo26n",
+  "role": "edge_candidate",
+  "checkpoint": "yolo26n.pt",
+  "source": "official",
+  "sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+  "file_size_bytes": 5544453,
+  "file_size_mb": 5.29,
+  "parameters": 2572280,
+  "task": "detect",
+  "class_count": 80,
+  "class_names_hash": "da078b5d523c93ff6407be95724e48bfb4e89736567ced4394c770d27b192838",
+  "input_size": 320,
+  "framework": {
+    "ultralytics": "8.4.204",
+    "torch": "2.14.1+cpu",
+    "python": "3.10.12"
+  },
+  "status": "validated",
+  "error": null,
+  "source_url": "https://github.com/ultralytics/assets/releases/download/v8.4.0/yolo26n.pt"
+}

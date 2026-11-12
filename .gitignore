@@ -218,3 +218,20 @@ __marimo__/
 .streamlit/secrets.toml
 
 datasets/
+
+# ---- 1_model_development (Phase A) ----
+# Model artifacts
+1_model_development/weights/**/*.pt
+1_model_development/weights/**/*.onnx
+1_model_development/weights/**/*.bin
+1_model_development/weights/**/*.param
+1_model_development/artifacts/**/*.onnx
+1_model_development/artifacts/**/*.tar.gz
+
+# Dataset
+1_model_development/datasets/raw/
+1_model_development/datasets/processed/
+
+# Experiment outputs
+runs/
+1_model_development/benchmarks/raw/

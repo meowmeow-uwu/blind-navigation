@@ -1,0 +1,30 @@
+{
+  "model": "yolo12n",
+  "format": "onnx",
+  "precision": "fp32",
+  "input_size": 320,
+  "batch_size": 1,
+  "dynamic": false,
+  "opset": 12,
+  "nms_included": false,
+  "simplify": true,
+  "onnx_path": "weights/onnx/yolo12n_320_fp32.onnx",
+  "onnx_sha256": "b9fe632d27ac7f15bae020a2e4cde2088dceab8e154c74e64eae337511857cbd",
+  "onnx_size_bytes": 10575462,
+  "onnx_size_mb": 10.09,
+  "source_checkpoint": "weights/pytorch/yolo12n.pt",
+  "export_config": {
+    "format": "onnx",
+    "imgsz": 320,
+    "batch": 1,
+    "dynamic": false,
+    "simplify": true,
+    "opset": 12,
+    "half": false,
+    "int8": false,
+    "nms": false
+  },
+  "export_time_sec": 2.14,
+  "exported_at": "2026-11-07T10:12:02.142694Z",
+  "status": "success"
+}

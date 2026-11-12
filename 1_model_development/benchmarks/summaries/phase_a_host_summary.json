@@ -1,0 +1,265 @@
+{
+  "generated_at": "2026-11-07T10:35:40.964208Z",
+  "model_benchmarks": {
+    "yolov8n": {
+      "model": "yolov8n",
+      "runtime": "onnxruntime",
+      "precision": "fp32",
+      "input_size": 320,
+      "runs": 1000,
+      "repeats": 3,
+      "latency": {
+        "total_mean_ms": 16.141,
+        "total_median_ms": 16.296,
+        "total_p50_ms": 16.296,
+        "total_p95_ms": 17.082,
+        "total_p99_ms": 18.077,
+        "total_min_ms": 12.998,
+        "total_max_ms": 28.115
+      },
+      "peak_ram_mb": 138.7,
+      "onnx_sha256": "b23211ee9efaa3d650054de2f9706482b56ea36c4c3bf914f85c904d68f50b0f",
+      "git_commit": "668aad38",
+      "timestamp": "2026-11-07T10:29:15.477337Z"
+    },
+    "yolo11n": {
+      "model": "yolo11n",
+      "runtime": "onnxruntime",
+      "precision": "fp32",
+      "input_size": 320,
+      "runs": 1000,
+      "repeats": 3,
+      "latency": {
+        "total_mean_ms": 15.458,
+        "total_median_ms": 15.584,
+        "total_p50_ms": 15.584,
+        "total_p95_ms": 16.752,
+        "total_p99_ms": 18.66,
+        "total_min_ms": 12.717,
+        "total_max_ms": 34.563
+      },
+      "peak_ram_mb": 142.9,
+      "onnx_sha256": "f2e265d0d0ccd1f64c86b3d77e0ae85517268020a7aa4a8e4881ceeb841236e3",
+      "git_commit": "668aad38",
+      "timestamp": "2026-11-07T10:30:35.367113Z"
+    },
+    "yolo12n": {
+      "model": "yolo12n",
+      "runtime": "onnxruntime",
+      "precision": "fp32",
+      "input_size": 320,
+      "runs": 1000,
+      "repeats": 3,
+      "latency": {
+        "total_mean_ms": 17.215,
+        "total_median_ms": 17.276,
+        "total_p50_ms": 17.276,
+        "total_p95_ms": 18.507,
+        "total_p99_ms": 20.463,
+        "total_min_ms": 14.588,
+        "total_max_ms": 34.684
+      },
+      "peak_ram_mb": 143.1,
+      "onnx_sha256": "b9fe632d27ac7f15bae020a2e4cde2088dceab8e154c74e64eae337511857cbd",
+      "git_commit": "668aad38",
+      "timestamp": "2026-11-07T10:32:00.784596Z"
+    },
+    "yolo26n": {
+      "model": "yolo26n",
+      "runtime": "onnxruntime",
+      "precision": "fp32",
+      "input_size": 320,
+      "runs": 1000,
+      "repeats": 3,
+      "latency": {
+        "total_mean_ms": 14.412,
+        "total_median_ms": 14.355,
+        "total_p50_ms": 14.355,
+        "total_p95_ms": 15.602,
+        "total_p99_ms": 16.484,
+        "total_min_ms": 12.252,
+        "total_max_ms": 40.451
+      },
+      "peak_ram_mb": 140.7,
+      "onnx_sha256": "ce0da533184b3df3ebcd2c527f7dd3225f0dba0d9664f3788d1a86f0be33d3ef",
+      "git_commit": "668aad38",
+      "timestamp": "2026-11-07T10:33:17.294285Z"
+    }
+  },
+  "video_benchmarks": {
+    "yolov8n": {
+      "model": "yolov8n",
+      "status": "passed",
+      "video": "assets/benchmark_video/walking_scene.mp4",
+      "video_info": {
+        "total_frames": 300,
+        "resolution": "810x1080",
+        "fps": 30.0
+      },
+      "processing": {
+        "processed_frames": 300,
+        "mean_frame_ms": 17.989,
+        "median_frame_ms": 18.095,
+        "p50_frame_ms": 18.095,
+        "p95_frame_ms": 19.158,
+        "p99_frame_ms": 19.951,
+        "min_frame_ms": 14.913,
+        "max_frame_ms": 21.531
+      },
+      "detections": {
+        "mean_per_frame": 4.0,
+        "max_per_frame": 4,
+        "min_per_frame": 4
+      },
+      "resources": {
+        "peak_ram_mb": 171.6
+      },
+      "pipeline_fps": 30.0,
+      "timestamp": "2026-11-07T10:34:17.317266Z"
+    },
+    "yolo11n": {
+      "model": "yolo11n",
+      "status": "passed",
+      "video": "assets/benchmark_video/walking_scene.mp4",
+      "video_info": {
+        "total_frames": 300,
+        "resolution": "810x1080",
+        "fps": 30.0
+      },
+      "processing": {
+        "processed_frames": 300,
+        "mean_frame_ms": 16.767,
+        "median_frame_ms": 17.185,
+        "p50_frame_ms": 17.185,
+        "p95_frame_ms": 18.026,
+        "p99_frame_ms": 18.99,
+        "min_frame_ms": 14.554,
+        "max_frame_ms": 20.278
+      },
+      "detections": {
+        "mean_per_frame": 5.0,
+        "max_per_frame": 5,
+        "min_per_frame": 5
+      },
+      "resources": {
+        "peak_ram_mb": 179.1
+      },
+      "pipeline_fps": 30.0,
+      "timestamp": "2026-11-07T10:34:23.868814Z"
+    },
+    "yolo12n": {
+      "model": "yolo12n",
+      "status": "passed",
+      "video": "assets/benchmark_video/walking_scene.mp4",
+      "video_info": {
+        "total_frames": 300,
+        "resolution": "810x1080",
+        "fps": 30.0
+      },
+      "processing": {
+        "processed_frames": 300,
+        "mean_frame_ms": 18.921,
+        "median_frame_ms": 18.902,
+        "p50_frame_ms": 18.902,
+        "p95_frame_ms": 19.992,
+        "p99_frame_ms": 20.717,
+        "min_frame_ms": 16.3,
+        "max_frame_ms": 22.677
+      },
+      "detections": {
+        "mean_per_frame": 4.0,
+        "max_per_frame": 4,
+        "min_per_frame": 4
+      },
+      "resources": {
+        "peak_ram_mb": 185.0
+      },
+      "pipeline_fps": 30.0,
+      "timestamp": "2026-11-07T10:34:31.179498Z"
+    },
+    "yolo26n": {
+      "model": "yolo26n",
+      "status": "passed",
+      "video": "assets/benchmark_video/walking_scene.mp4",
+      "video_info": {
+        "total_frames": 300,
+        "resolution": "810x1080",
+        "fps": 30.0
+      },
+      "processing": {
+        "processed_frames": 300,
+        "mean_frame_ms": 15.734,
+        "median_frame_ms": 15.754,
+        "p50_frame_ms": 15.754,
+        "p95_frame_ms": 17.834,
+        "p99_frame_ms": 18.543,
+        "min_frame_ms": 13.754,
+        "max_frame_ms": 21.464
+      },
+      "detections": {
+        "mean_per_frame": 5.0,
+        "max_per_frame": 5,
+        "min_per_frame": 5
+      },
+      "resources": {
+        "peak_ram_mb": 182.4
+      },
+      "pipeline_fps": 30.0,
+      "timestamp": "2026-11-07T10:34:37.492872Z"
+    }
+  },
+  "unified_summary": [
+    {
+      "model": "yolov8n",
+      "backend": "onnxruntime",
+      "precision": "fp32",
+      "input_size": 320,
+      "model_only_p50_ms": 16.296,
+      "model_only_p95_ms": 17.082,
+      "video_p50_ms": 18.095,
+      "video_p95_ms": 19.158,
+      "pipeline_fps": 30.0,
+      "peak_ram_mb": 138.7,
+      "status": "validated"
+    },
+    {
+      "model": "yolo11n",
+      "backend": "onnxruntime",
+      "precision": "fp32",
+      "input_size": 320,
+      "model_only_p50_ms": 15.584,
+      "model_only_p95_ms": 16.752,
+      "video_p50_ms": 17.185,
+      "video_p95_ms": 18.026,
+      "pipeline_fps": 30.0,
+      "peak_ram_mb": 142.9,
+      "status": "validated"
+    },
+    {
+      "model": "yolo12n",
+      "backend": "onnxruntime",
+      "precision": "fp32",
+      "input_size": 320,
+      "model_only_p50_ms": 17.276,
+      "model_only_p95_ms": 18.507,
+      "video_p50_ms": 18.902,
+      "video_p95_ms": 19.992,
+      "pipeline_fps": 30.0,
+      "peak_ram_mb": 143.1,
+      "status": "validated"
+    },
+    {
+      "model": "yolo26n",
+      "backend": "onnxruntime",
+      "precision": "fp32",
+      "input_size": 320,
+      "model_only_p50_ms": 14.355,
+      "model_only_p95_ms": 15.602,
+      "video_p50_ms": 15.754,
+      "video_p95_ms": 17.834,
+      "pipeline_fps": 30.0,
+      "peak_ram_mb": 140.7,
+      "status": "validated"
+    }
+  ]
+}

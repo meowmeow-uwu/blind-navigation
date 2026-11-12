@@ -1,0 +1,318 @@
+{
+  "validated_at": "2026-11-10T14:15:40.972155+00:00",
+  "all_passed": true,
+  "models": {
+    "yolov8n": {
+      "model": "yolov8n",
+      "pt_path": "/home/dutai/pbl6-blind-navigation/rod-paper/yolov8n-rod/yolov8n_best.pt",
+      "onnx_path": "/home/dutai/pbl6-blind-navigation/blind-navigation/1_model_development/weights/onnx/yolov8n_320_fp32.onnx",
+      "status": "passed",
+      "passed": true,
+      "metrics": {
+        "max_abs_error": 0.000916,
+        "mean_abs_error": 3e-06,
+        "min_cosine_similarity": 1.0
+      },
+      "thresholds": {
+        "max_abs_tol": 0.05,
+        "cosine_tol": 0.999
+      },
+      "sample_evaluations": [
+        {
+          "image": "IMG_19187.jpg",
+          "max_abs_diff": 0.000473,
+          "mean_abs_diff": 3e-06,
+          "cosine_similarity": 1.0
+        },
+        {
+          "image": "IMG_19188.jpg",
+          "max_abs_diff": 0.000443,
+          "mean_abs_diff": 3e-06,
+          "cosine_similarity": 1.0
+        },
+        {
+          "image": "IMG_19190.jpg",
+          "max_abs_diff": 0.000336,
+          "mean_abs_diff": 3e-06,
+          "cosine_similarity": 1.0
+        },
+        {
+          "image": "IMG_19191.jpg",
+          "max_abs_diff": 0.000854,
+          "mean_abs_diff": 4e-06,
+          "cosine_similarity": 1.0
+        },
+        {
+          "image": "IMG_19192.jpg",
+          "max_abs_diff": 0.000793,
+          "mean_abs_diff": 4e-06,
+          "cosine_similarity": 1.0
+        },
+        {
+          "image": "IMG_19193.jpg",
+          "max_abs_diff": 0.000366,
+          "mean_abs_diff": 4e-06,
+          "cosine_similarity": 1.0
+        },
+        {
+          "image": "IMG_19194.jpg",
+          "max_abs_diff": 0.000549,
+          "mean_abs_diff": 3e-06,
+          "cosine_similarity": 1.0
+        },
+        {
+          "image": "IMG_19195.jpg",
+          "max_abs_diff": 0.00032,
+          "mean_abs_diff": 3e-06,
+          "cosine_similarity": 1.0
+        },
+        {
+          "image": "IMG_19197.jpg",
+          "max_abs_diff": 0.00061,
+          "mean_abs_diff": 3e-06,
+          "cosine_similarity": 1.0
+        },
+        {
+          "image": "IMG_19198.jpg",
+          "max_abs_diff": 0.000916,
+          "mean_abs_diff": 4e-06,
+          "cosine_similarity": 1.0
+        }
+      ]
+    },
+    "yolov9t": {
+      "model": "yolov9t",
+      "pt_path": "/home/dutai/pbl6-blind-navigation/rod-paper/yolov9t/yolov9t_best.pt",
+      "onnx_path": "/home/dutai/pbl6-blind-navigation/blind-navigation/1_model_development/weights/onnx/yolov9t_320_fp32.onnx",
+      "status": "passed",
+      "passed": true,
+      "metrics": {
+        "max_abs_error": 0.000717,
+        "mean_abs_error": 3e-06,
+        "min_cosine_similarity": 1.0
+      },
+      "thresholds": {
+        "max_abs_tol": 0.05,
+        "cosine_tol": 0.999
+      },
+      "sample_evaluations": [
+        {
+          "image": "IMG_19187.jpg",
+          "max_abs_diff": 0.000366,
+          "mean_abs_diff": 3e-06,
+          "cosine_similarity": 1.0
+        },
+        {
+          "image": "IMG_19188.jpg",
+          "max_abs_diff": 0.000381,
+          "mean_abs_diff": 3e-06,
+          "cosine_similarity": 1.0
+        },
+        {
+          "image": "IMG_19190.jpg",
+          "max_abs_diff": 0.000717,
+          "mean_abs_diff": 3e-06,
+          "cosine_similarity": 1.0
+        },
+        {
+          "image": "IMG_19191.jpg",
+          "max_abs_diff": 0.000443,
+          "mean_abs_diff": 3e-06,
+          "cosine_similarity": 1.0
+        },
+        {
+          "image": "IMG_19192.jpg",
+          "max_abs_diff": 0.000549,
+          "mean_abs_diff": 4e-06,
+          "cosine_similarity": 1.0
+        },
+        {
+          "image": "IMG_19193.jpg",
+          "max_abs_diff": 0.000275,
+          "mean_abs_diff": 3e-06,
+          "cosine_similarity": 1.0
+        },
+        {
+          "image": "IMG_19194.jpg",
+          "max_abs_diff": 0.000244,
+          "mean_abs_diff": 3e-06,
+          "cosine_similarity": 1.0
+        },
+        {
+          "image": "IMG_19195.jpg",
+          "max_abs_diff": 0.000397,
+          "mean_abs_diff": 3e-06,
+          "cosine_similarity": 1.0
+        },
+        {
+          "image": "IMG_19197.jpg",
+          "max_abs_diff": 0.000458,
+          "mean_abs_diff": 3e-06,
+          "cosine_similarity": 1.0
+        },
+        {
+          "image": "IMG_19198.jpg",
+          "max_abs_diff": 0.000443,
+          "mean_abs_diff": 4e-06,
+          "cosine_similarity": 1.0
+        }
+      ]
+    },
+    "yolov12n": {
+      "model": "yolov12n",
+      "pt_path": "/home/dutai/pbl6-blind-navigation/rod-paper/yolov12n/yolov12n_best.pt",
+      "onnx_path": "/home/dutai/pbl6-blind-navigation/blind-navigation/1_model_development/weights/onnx/yolov12n_320_fp32.onnx",
+      "status": "passed",
+      "passed": true,
+      "metrics": {
+        "max_abs_error": 0.001038,
+        "mean_abs_error": 3e-06,
+        "min_cosine_similarity": 1.0
+      },
+      "thresholds": {
+        "max_abs_tol": 0.05,
+        "cosine_tol": 0.999
+      },
+      "sample_evaluations": [
+        {
+          "image": "IMG_19187.jpg",
+          "max_abs_diff": 0.001007,
+          "mean_abs_diff": 3e-06,
+          "cosine_similarity": 1.0
+        },
+        {
+          "image": "IMG_19188.jpg",
+          "max_abs_diff": 0.000381,
+          "mean_abs_diff": 3e-06,
+          "cosine_similarity": 1.0
+        },
+        {
+          "image": "IMG_19190.jpg",
+          "max_abs_diff": 0.000519,
+          "mean_abs_diff": 3e-06,
+          "cosine_similarity": 1.0
+        },
+        {
+          "image": "IMG_19191.jpg",
+          "max_abs_diff": 0.000816,
+          "mean_abs_diff": 3e-06,
+          "cosine_similarity": 1.0
+        },
+        {
+          "image": "IMG_19192.jpg",
+          "max_abs_diff": 0.001038,
+          "mean_abs_diff": 4e-06,
+          "cosine_similarity": 1.0
+        },
+        {
+          "image": "IMG_19193.jpg",
+          "max_abs_diff": 0.000488,
+          "mean_abs_diff": 4e-06,
+          "cosine_similarity": 1.0
+        },
+        {
+          "image": "IMG_19194.jpg",
+          "max_abs_diff": 0.000587,
+          "mean_abs_diff": 3e-06,
+          "cosine_similarity": 1.0
+        },
+        {
+          "image": "IMG_19195.jpg",
+          "max_abs_diff": 0.000519,
+          "mean_abs_diff": 3e-06,
+          "cosine_similarity": 1.0
+        },
+        {
+          "image": "IMG_19197.jpg",
+          "max_abs_diff": 0.000778,
+          "mean_abs_diff": 3e-06,
+          "cosine_similarity": 1.0
+        },
+        {
+          "image": "IMG_19198.jpg",
+          "max_abs_diff": 0.000397,
+          "mean_abs_diff": 3e-06,
+          "cosine_similarity": 1.0
+        }
+      ]
+    },
+    "yolov26n": {
+      "model": "yolov26n",
+      "pt_path": "/home/dutai/pbl6-blind-navigation/rod-paper/yolov26n/yolo26n_best.pt",
+      "onnx_path": "/home/dutai/pbl6-blind-navigation/blind-navigation/1_model_development/weights/onnx/yolov26n_320_fp32.onnx",
+      "status": "passed",
+      "passed": true,
+      "metrics": {
+        "max_abs_error": 0.0,
+        "mean_abs_error": 0.0,
+        "min_cosine_similarity": 1.0
+      },
+      "thresholds": {
+        "max_abs_tol": 0.05,
+        "cosine_tol": 0.999
+      },
+      "sample_evaluations": [
+        {
+          "image": "IMG_19187.jpg",
+          "max_abs_diff": 0.0,
+          "mean_abs_diff": 0.0,
+          "cosine_similarity": 1.0
+        },
+        {
+          "image": "IMG_19188.jpg",
+          "max_abs_diff": 0.0,
+          "mean_abs_diff": 0.0,
+          "cosine_similarity": 1.0
+        },
+        {
+          "image": "IMG_19190.jpg",
+          "max_abs_diff": 0.0,
+          "mean_abs_diff": 0.0,
+          "cosine_similarity": 1.0
+        },
+        {
+          "image": "IMG_19191.jpg",
+          "max_abs_diff": 0.0,
+          "mean_abs_diff": 0.0,
+          "cosine_similarity": 1.0
+        },
+        {
+          "image": "IMG_19192.jpg",
+          "max_abs_diff": 0.0,
+          "mean_abs_diff": 0.0,
+          "cosine_similarity": 1.0
+        },
+        {
+          "image": "IMG_19193.jpg",
+          "max_abs_diff": 0.0,
+          "mean_abs_diff": 0.0,
+          "cosine_similarity": 1.0
+        },
+        {
+          "image": "IMG_19194.jpg",
+          "max_abs_diff": 0.0,
+          "mean_abs_diff": 0.0,
+          "cosine_similarity": 1.0
+        },
+        {
+          "image": "IMG_19195.jpg",
+          "max_abs_diff": 0.0,
+          "mean_abs_diff": 0.0,
+          "cosine_similarity": 1.0
+        },
+        {
+          "image": "IMG_19197.jpg",
+          "max_abs_diff": 0.0,
+          "mean_abs_diff": 0.0,
+          "cosine_similarity": 1.0
+        },
+        {
+          "image": "IMG_19198.jpg",
+          "max_abs_diff": 0.0,
+          "mean_abs_diff": 0.0,
+          "cosine_similarity": 1.0
+        }
+      ]
+    }
+  }
+}
