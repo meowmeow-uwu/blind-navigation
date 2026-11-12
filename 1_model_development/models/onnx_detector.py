@@ -166,7 +166,12 @@ def nms(boxes: np.ndarray, scores: np.ndarray, iou_threshold: float = 0.45) -> n
 class ONNXDetector:
     """ONNX Runtime detector for YOLO models."""
     
-    def __init__(self, onnx_path: str, class_names: list[str] | None = None):
+    def __init__(
+        self,
+        onnx_path: str,
+        class_names: list[str] | None = None,
+        session_options: ort.SessionOptions | None = None,
+    ):
         """Initialize ONNX detector.
         
         Args:
@@ -178,6 +183,7 @@ class ONNXDetector:
         # Load ONNX model
         self.session = ort.InferenceSession(
             onnx_path,
+            sess_options=session_options,
             providers=["CPUExecutionProvider"],
         )
         
