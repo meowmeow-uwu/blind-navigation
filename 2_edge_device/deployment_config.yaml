@@ -78,6 +78,21 @@ int8:
 inference:
   confidence_threshold: 0.25
   nms_iou_threshold: 0.45
+  operational_thresholds:
+    yolov12n:
+      backend: onnx
+      precision: fp32
+      imgsz: 640
+      confidence_threshold: 0.10
+      nms_iou_threshold: 0.70
+      selected_on: rod_clean_v1/valid
+    yolov26n:
+      backend: onnx
+      precision: int8
+      imgsz: 640
+      confidence_threshold: 0.05
+      nms_iou_threshold: 0.70
+      selected_on: rod_clean_v1/valid
 
 # ── Output Schema ────────────────────────────────────────────────────────────
 # Every detector (ONNX or NCNN) must return a list of dicts:

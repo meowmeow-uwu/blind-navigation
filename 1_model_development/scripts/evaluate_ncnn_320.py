@@ -2,6 +2,7 @@
 """Evaluate cached NCNN FP32 320x320 models directly on rod_clean_v1/test."""
 from __future__ import annotations
 
+import argparse
 import json
 import sys
 import time
@@ -25,8 +26,9 @@ MODEL_DEV_ROOT = SCRIPT_DIR.parent
 REPO_ROOT = MODEL_DEV_ROOT.parent.parent
 WEIGHTS_DIR = MODEL_DEV_ROOT / "weights"
 DATASET_DIR = MODEL_DEV_ROOT / "datasets" / "processed" / "rod_clean_v1"
-TEST_IMAGES_DIR = DATASET_DIR / "test" / "images"
-TEST_LABELS_DIR = DATASET_DIR / "test" / "labels"
+SPLIT = "test"
+TEST_IMAGES_DIR = DATASET_DIR / SPLIT / "images"
+TEST_LABELS_DIR = DATASET_DIR / SPLIT / "labels"
 REPORTS_DIR = MODEL_DEV_ROOT / "reports" / "pipeline_run"
 
 ROD_MODELS = ("yolov8n", "yolov9t", "yolov12n", "yolov26n")
@@ -96,7 +98,8 @@ def letterbox_image(image: np.ndarray, letterbox: LetterBox) -> tuple[np.ndarray
 
 
 def evaluate_model(model_name: str, images: list[Path], critical_classes: set[str]) -> dict[str, Any]:
-    model_dir = WEIGHTS_DIR / "ncnn" / f"{model_name}_ncnn_fp32"
+    model_dir_name = f"{model_name}_ncnn_fp32" if IMAGE_SIZE == 320 else f"{model_name}_rod_{IMAGE_SIZE}_ncnn_fp32"
+    model_dir = WEIGHTS_DIR / "ncnn" / model_dir_name
     param_path = model_dir / "model.ncnn.param"
     bin_path = model_dir / "model.ncnn.bin"
     if not param_path.is_file() or not bin_path.is_file():
@@ -202,8 +205,9 @@ def evaluate_model(model_name: str, images: list[Path], critical_classes: set[st
         value for name, value in per_class_recall.items()
         if name in critical_classes and value is not None
     ]
+    critical_min_recall = min(critical_recalls) if critical_recalls else None
     return {
-        "artifact": f"weights/ncnn/{model_name}_ncnn_fp32/model.ncnn.param + model.ncnn.bin",
+        "artifact": f"weights/ncnn/{model_dir_name}/model.ncnn.param + model.ncnn.bin",
         "sha256": {"param": sha256_file(param_path), "bin": sha256_file(bin_path)},
         "imgsz": IMAGE_SIZE,
         "runtime": "ncnn",
@@ -221,6 +225,7 @@ def evaluate_model(model_name: str, images: list[Path], critical_classes: set[st
         "false_negatives": sum(per_class_false_negatives.values()),
         "false_negative_definition": "ground-truth count minus round(class recall at Ultralytics selected F1 confidence times ground-truth count)",
         "dangerous_class_macro_recall": round(float(np.mean(critical_recalls)), 6) if critical_recalls else None,
+        "critical_min_recall": round(float(critical_min_recall), 6) if critical_min_recall is not None else None,
         "dangerous_classes": sorted(critical_classes),
         "target_instances_per_class": {
             name: int(target_counts[index]) for index, name in enumerate(ROD_CLASSES)
@@ -232,6 +237,16 @@ def evaluate_model(model_name: str, images: list[Path], critical_classes: set[st
 
 
 def main() -> None:
+    global IMAGE_SIZE, SPLIT, TEST_IMAGES_DIR, TEST_LABELS_DIR
+    parser = argparse.ArgumentParser(description="Evaluate cached native NCNN model artifacts")
+    parser.add_argument("--imgsz", type=int, choices=(320, 640), default=320)
+    parser.add_argument("--split", choices=("test",), default="test")
+    args = parser.parse_args()
+    IMAGE_SIZE = args.imgsz
+    SPLIT = args.split
+    TEST_IMAGES_DIR = DATASET_DIR / SPLIT / "images"
+    TEST_LABELS_DIR = DATASET_DIR / SPLIT / "labels"
+
     images = list_test_images()
     if len(images) != 1615:
         raise RuntimeError(f"Expected 1615 test images, found {len(images)} in {TEST_IMAGES_DIR}")
@@ -248,7 +263,7 @@ def main() -> None:
     print(f"Direct NCNN FP32 evaluation: {len(images)} test images at {IMAGE_SIZE}x{IMAGE_SIZE}")
     models = {}
     for model_name in ROD_MODELS:
-        print(f"\nEvaluating {model_name} NCNN FP32 320 with ncnn.Net", flush=True)
+        print(f"\nEvaluating {model_name} NCNN FP32 {IMAGE_SIZE} with ncnn.Net", flush=True)
         models[model_name] = evaluate_model(model_name, images, critical_classes)
         print(
             f"  mAP50={models[model_name]['mAP50']:.4f} "
@@ -257,21 +272,85 @@ def main() -> None:
             flush=True,
         )
 
-    report_path = REPORTS_DIR / "ncnn_fp32_320_accuracy_report.json"
+    manifest_path = None
+    manifest = None
+    if IMAGE_SIZE == 640:
+        reference_path = REPORTS_DIR / "onnx_fp32_640_accuracy_report.json"
+        if not reference_path.is_file():
+            raise FileNotFoundError(f"ONNX FP32 640 reference report missing: {reference_path}")
+        reference = json.loads(reference_path.read_text())["models"]
+        manifest_path = WEIGHTS_DIR / "manifest.json"
+        manifest = json.loads(manifest_path.read_text())
+        for model_name, result in models.items():
+            onnx_metrics = reference[model_name]["accuracy"]
+            deltas = {
+                key: round(result[key] - onnx_metrics[key], 6)
+                for key in ("mAP50", "mAP50_95", "recall")
+            }
+            gates = {key: abs(value) <= 0.005 for key, value in deltas.items()}
+            passed = all(gates.values())
+            result["comparison_vs_onnx_fp32_640"] = {
+                "metrics": {key: onnx_metrics[key] for key in ("mAP50", "mAP50_95", "recall")},
+                "deltas_ncnn_minus_onnx": deltas,
+                "gate_tolerances": {"mAP50": 0.005, "mAP50_95": 0.005, "recall": 0.005},
+                "gate_passed": gates,
+            }
+            result["accuracy_status"] = "verified" if passed else "failed_gate"
+            result["accuracy_passed"] = passed
+            manifest_entry = manifest["models"][model_name]["ncnn_fp32_640"]
+            manifest_entry["accuracy"] = result
+            manifest_entry["accuracy_status"] = result["accuracy_status"]
+            manifest_entry["accuracy_passed"] = passed
+            manifest_entry["accuracy_note"] = (
+                "Native NCNN FP32 full-test evaluation passed all gates against ONNX FP32 640."
+                if passed else "Native NCNN FP32 full-test evaluation did not pass all ONNX comparison gates."
+            )
+        manifest["updated_at"] = datetime.now(timezone.utc).isoformat()
+
+    report_path = REPORTS_DIR / f"ncnn_fp32_{IMAGE_SIZE}_accuracy_report.json"
     report_path.parent.mkdir(parents=True, exist_ok=True)
-    report_path.write_text(json.dumps({
+    report = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "imgsz": IMAGE_SIZE,
-        "dataset": "rod_clean_v1/test",
+        "dataset": f"rod_clean_v1/{SPLIT}",
         "test_images": len(images),
+        "nms_iou_threshold": NMS_IOU_THRESHOLD,
+        "confidence_threshold": CONF_THRESHOLD,
         "preprocessing": {
-            "letterbox": "Ultralytics LetterBox, 320x320, fill=114, aspect ratio preserved",
+            "letterbox": f"Ultralytics LetterBox, {IMAGE_SIZE}x{IMAGE_SIZE}, fill=114, aspect ratio preserved",
             "color_order": "RGB",
             "normalization": "divide_by_255",
         },
         "models": models,
-    }, indent=2))
+    }
+    report_path.write_text(json.dumps(report, indent=2))
     print(f"\nNCNN full-test report: {report_path}")
+
+    if IMAGE_SIZE == 640:
+        lines = [
+            "# Native NCNN FP32 640 Accuracy Verification", "",
+            "- Dataset: `rod_clean_v1/test` (1,615 images)",
+            "- Runtime: direct `ncnn.Net()` `.param/.bin` inference; Ultralytics NMS/matching/AP evaluator",
+            "- Preprocessing: letterbox 640, RGB, divide by 255; confidence 0.001; NMS IoU 0.7", "",
+            "| Model | mAP50 | mAP50-95 | Precision | Recall | Dangerous recall | Critical min | FN | ΔmAP50 | ΔmAP50-95 | ΔRecall | Gate |",
+            "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|",
+        ]
+        for model_name, result in models.items():
+            delta = result["comparison_vs_onnx_fp32_640"]["deltas_ncnn_minus_onnx"]
+            lines.append(
+                f"| {model_name} | {result['mAP50']:.4f} | {result['mAP50_95']:.4f} | "
+                f"{result['precision']:.4f} | {result['recall']:.4f} | {result['dangerous_class_macro_recall']:.4f} | "
+                f"{result['critical_min_recall']:.4f} | {result['false_negatives']} | "
+                f"{delta['mAP50']:+.4f} | {delta['mAP50_95']:+.4f} | {delta['recall']:+.4f} | "
+                f"{'PASS' if result['accuracy_passed'] else 'FAIL'} |"
+            )
+        lines.extend(["", "Per-class recall, class counts, hashes, and exact gate results are recorded in the JSON report.", ""])
+        md_path = REPORTS_DIR / "ncnn_fp32_640_accuracy_report.md"
+        md_path.write_text("\n".join(lines))
+        if manifest_path is not None and manifest is not None:
+            manifest_path.write_text(json.dumps(manifest, indent=2))
+        print(f"NCNN accuracy Markdown report: {md_path}")
+        print("NCNN 640 accuracy_status updated per model based on the stated comparison gates.")
 
 
 if __name__ == "__main__":
