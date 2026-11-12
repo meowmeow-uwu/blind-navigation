@@ -2,6 +2,8 @@
 
 > **Target audience**: Developers integrating ROD model artifacts into `2_edge_device/`.
 
+> **320 best-model update:** This document contains legacy examples and must not be used as-is for the current 320 ROD artifacts. In particular, its old ONNX/NCNN runner examples do not match the current edge implementation. Use [BEST_MODEL_INFERENCE.md](../2_edge_device/BEST_MODEL_INFERENCE.md) and its checksum-verifying `best_model_inference.py` template for the benchmarked 320 configurations. The 640 guidance below is retained for reference.
+
 ---
 
 ## Table of Contents
