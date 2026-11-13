@@ -35,3 +35,4 @@ Hệ thống tài liệu dự án được cấu trúc thành **2 phân hệ ho�
 
 - **Hệ thống thời gian thực:** Nằm tại `2_edge_device/main.py`, `core/`, `modules/`, `configs/`.
 - **Bộ công cụ thực nghiệm:** Nằm độc lập tại `2_edge_device/experiments/tracking_benchmark/` (xem [`README`](../2_edge_device/experiments/tracking_benchmark/README.md)).
+

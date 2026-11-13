@@ -34,3 +34,4 @@ Toàn bộ bộ công cụ phần mềm thực thi thực nghiệm nằm tại:
 - `run_benchmark.py`: Bộ thực thi replay đối sánh tự động.
 - `evaluate_results.py`: Bộ tính toán chỉ số MOTA/IDF1 và xuất báo cáo Markdown.
 - `test_tracking_benchmark_pipeline.py`: Kiểm thử tự động toàn bộ luồng thực nghiệm.
+

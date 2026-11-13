@@ -64,3 +64,4 @@ python3 evaluate_results.py --logs-dir results/logs --gt-dir data/ground_truth -
 python3 test_tracking_benchmark_pipeline.py
 ```
 *(Tự động sinh dữ liệu kiểm thử, chạy 4 tracker, kiểm tra 15 cột log CSV và xác nhận các chỉ số MOTA/IDF1).*
+
