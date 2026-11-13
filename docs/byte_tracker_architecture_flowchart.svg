@@ -1,0 +1,169 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 620" width="100%" height="100%" style="background:#0f172a; font-family:'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;">
+  <defs>
+    <!-- Gradients -->
+    <linearGradient id="grad-title" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#818cf8"/>
+    </linearGradient>
+    <linearGradient id="grad-s1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0284c7"/>
+      <stop offset="100%" stop-color="#0369a1"/>
+    </linearGradient>
+    <linearGradient id="grad-s2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#d97706"/>
+      <stop offset="100%" stop-color="#b45309"/>
+    </linearGradient>
+    <linearGradient id="grad-keep" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#059669"/>
+      <stop offset="100%" stop-color="#047857"/>
+    </linearGradient>
+    <linearGradient id="grad-new" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7c3aed"/>
+      <stop offset="100%" stop-color="#6d28d9"/>
+    </linearGradient>
+    <linearGradient id="grad-out" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0d9488"/>
+      <stop offset="100%" stop-color="#0f766e"/>
+    </linearGradient>
+
+    <!-- Shadow -->
+    <filter id="card-shadow" x="-5%" y="-5%" width="110%" height="115%" filterUnits="userSpaceOnUse">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+      <feOffset dx="0" dy="3" result="offsetblur"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.3"/></feComponentTransfer>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+
+    <!-- Markers -->
+    <marker id="arr-gray" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#94a3b8"/>
+    </marker>
+    <marker id="arr-blue" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#38bdf8"/>
+    </marker>
+    <marker id="arr-amber" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#fbbf24"/>
+    </marker>
+    <marker id="arr-green" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#34d399"/>
+    </marker>
+    <marker id="arr-purple" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#c084fc"/>
+    </marker>
+  </defs>
+
+  <!-- Header -->
+  <text x="500" y="38" text-anchor="middle" font-size="20" font-weight="700" fill="url(#grad-title)">SƠ ĐỒ TỔNG QUAN GIẢI THUẬT BYTETRACK (HAI TẦNG)</text>
+  <text x="500" y="60" text-anchor="middle" font-size="12" fill="#94a3b8">Bám vết đối tượng thời gian thực trên Raspberry Pi 4 • Triệt tiêu nói lặp mà không cần Re-ID</text>
+
+  <!-- ================= 1. KHỐI ĐẦU VÀO ================= -->
+  <g filter="url(#card-shadow)">
+    <rect x="350" y="80" width="300" height="46" rx="8" fill="#1e293b" stroke="#475569" stroke-width="1.5"/>
+    <text x="500" y="108" text-anchor="middle" font-size="14" font-weight="700" fill="#f8fafc">DETECTIONS TỪ YOLOV8</text>
+  </g>
+
+  <!-- Mũi tên rẽ 2 nhánh -->
+  <path d="M 500 126 L 500 145" fill="none" stroke="#94a3b8" stroke-width="2"/>
+  <path d="M 300 145 L 700 145" fill="none" stroke="#94a3b8" stroke-width="2"/>
+  <path d="M 300 145 L 300 165" fill="none" stroke="#38bdf8" stroke-width="2" marker-end="url(#arr-blue)"/>
+  <path d="M 700 145 L 700 165" fill="none" stroke="#fbbf24" stroke-width="2" marker-end="url(#arr-amber)"/>
+
+  <!-- ================= 2. HAI TẬP TIN CẬY ================= -->
+  <!-- D_high -->
+  <g filter="url(#card-shadow)">
+    <rect x="180" y="165" width="240" height="50" rx="8" fill="#0f2b48" stroke="#0284c7" stroke-width="1.5"/>
+    <text x="300" y="190" text-anchor="middle" font-size="13" font-weight="700" fill="#38bdf8">TẬP D_high (Conf ≥ 0.45)</text>
+    <text x="300" y="206" text-anchor="middle" font-size="11" fill="#bae6fd">Vật cản nhìn rõ, ít nhiễu</text>
+  </g>
+
+  <!-- D_low -->
+  <g filter="url(#card-shadow)">
+    <rect x="580" y="165" width="240" height="50" rx="8" fill="#3a2205" stroke="#d97706" stroke-width="1.5"/>
+    <text x="700" y="190" text-anchor="middle" font-size="13" font-weight="700" fill="#fbbf24">TẬP D_low (0.20 ≤ Conf &lt; 0.45)</text>
+    <text x="700" y="206" text-anchor="middle" font-size="11" fill="#fde68a">Vật bị mờ, rung lắc, che khuất</text>
+  </g>
+
+  <!-- ================= 3. TẦNG 1: GHÉP D_HIGH ================= -->
+  <path d="M 300 215 L 300 240" fill="none" stroke="#38bdf8" stroke-width="2" marker-end="url(#arr-blue)"/>
+
+  <g filter="url(#card-shadow)">
+    <rect x="180" y="240" width="240" height="52" rx="8" fill="url(#grad-s1)" stroke="#38bdf8" stroke-width="1.5"/>
+    <text x="300" y="263" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">TẦNG 1: GHÉP VỚI TRACKS CŨ</text>
+    <text x="300" y="281" text-anchor="middle" font-size="11" fill="#e0f2fe">Ghép bằng IoU + Hungarian</text>
+  </g>
+
+  <!-- Tầng 1: Khớp được -> Xuống cập nhật -->
+  <path d="M 240 292 L 240 335" fill="none" stroke="#34d399" stroke-width="2" marker-end="url(#arr-green)"/>
+  <rect x="200" y="302" width="80" height="18" rx="3" fill="#064e3b"/>
+  <text x="240" y="315" text-anchor="middle" font-size="10" font-weight="700" fill="#6ee7b7">Khớp ✓</text>
+
+  <!-- Tầng 1: Tracks rớt -> Sang Tầng 2 -->
+  <path d="M 360 292 L 360 315 L 560 315 L 560 292" fill="none" stroke="#fbbf24" stroke-width="2" marker-end="url(#arr-amber)"/>
+  <rect x="410" y="306" width="105" height="18" rx="3" fill="#451a03"/>
+  <text x="462" y="319" text-anchor="middle" font-size="10" font-weight="700" fill="#fcd34d">Tracks chưa ghép</text>
+
+  <!-- Tầng 1: D_high rớt -> Sang Tạo track mới -->
+  <path d="M 180 266 L 90 266 L 90 355 L 140 355" fill="none" stroke="#c084fc" stroke-width="2" marker-end="url(#arr-purple)"/>
+  <rect x="40" y="295" width="100" height="18" rx="3" fill="#3b0764"/>
+  <text x="90" y="308" text-anchor="middle" font-size="10" font-weight="700" fill="#e9d5ff">D_high chưa ghép</text>
+
+  <!-- Khối CẬP NHẬT TRACK CŨ -->
+  <g filter="url(#card-shadow)">
+    <rect x="155" y="335" width="170" height="42" rx="6" fill="url(#grad-keep)" stroke="#34d399" stroke-width="1.2"/>
+    <text x="240" y="354" text-anchor="middle" font-size="12" font-weight="700" fill="#ffffff">CẬP NHẬT TRACK</text>
+    <text x="240" y="369" text-anchor="middle" font-size="10" font-weight="600" fill="#d1fae5">GIỮ NGUYÊN ID CŨ</text>
+  </g>
+
+  <!-- ================= 4. TẦNG 2: CỨU VẾT BẰNG D_LOW ================= -->
+  <!-- D_low đi xuống Tầng 2 -->
+  <path d="M 700 215 L 700 266 L 680 266" fill="none" stroke="#fbbf24" stroke-width="2" marker-end="url(#arr-amber)"/>
+
+  <g filter="url(#card-shadow)">
+    <rect x="480" y="240" width="200" height="52" rx="8" fill="url(#grad-s2)" stroke="#fbbf24" stroke-width="1.5"/>
+    <text x="580" y="263" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">TẦNG 2: CỨU VẾT</text>
+    <text x="580" y="281" text-anchor="middle" font-size="11" fill="#fef3c7">Ghép Track rớt với D_low</text>
+  </g>
+
+  <!-- Tầng 2: Cứu được -> Giữ ID cũ -->
+  <path d="M 520 292 L 520 356 L 335 356" fill="none" stroke="#34d399" stroke-width="2" marker-end="url(#arr-green)"/>
+  <rect x="470" y="325" width="80" height="18" rx="3" fill="#064e3b"/>
+  <text x="510" y="338" text-anchor="middle" font-size="10" font-weight="700" fill="#6ee7b7">Cứu được ✓</text>
+
+  <!-- Tầng 2: D_low rớt -> BỎ -->
+  <path d="M 640 292 L 640 335" fill="none" stroke="#94a3b8" stroke-width="2" marker-end="url(#arr-gray)"/>
+  <g filter="url(#card-shadow)">
+    <rect x="585" y="335" width="110" height="42" rx="6" fill="#1e293b" stroke="#64748b" stroke-width="1.2"/>
+    <text x="640" y="354" text-anchor="middle" font-size="11" font-weight="700" fill="#cbd5e1">BỎ D_low THỪA</text>
+    <text x="640" y="369" text-anchor="middle" font-size="9" fill="#94a3b8">Tránh rác nền</text>
+  </g>
+
+  <!-- ================= 5. TẠO TRACK MỚI ================= -->
+  <g filter="url(#card-shadow)">
+    <rect x="140" y="395" width="200" height="44" rx="6" fill="url(#grad-new)" stroke="#c084fc" stroke-width="1.2"/>
+    <text x="240" y="415" text-anchor="middle" font-size="12" font-weight="700" fill="#ffffff">TẠO TRACK MỚI</text>
+    <text x="240" y="430" text-anchor="middle" font-size="10" fill="#f3e8ff">Cấp ID mới tăng dần (1, 2, ...)</text>
+  </g>
+
+  <!-- Đường nối từ Cập nhật track xuống Tạo track và sang FSM -->
+  <path d="M 240 377 L 240 395" fill="none" stroke="#94a3b8" stroke-width="1.5"/>
+
+  <!-- ================= 6. BỘ LỌC VÒNG ĐỜI FSM ================= -->
+  <path d="M 340 417 L 390 417 L 390 475 L 430 475" fill="none" stroke="#94a3b8" stroke-width="2" marker-end="url(#arr-gray)"/>
+  <path d="M 640 377 L 640 435 L 550 435 L 550 450" fill="none" stroke="#94a3b8" stroke-width="1.5"/>
+
+  <g filter="url(#card-shadow)">
+    <rect x="350" y="450" width="300" height="50" rx="8" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5"/>
+    <text x="500" y="472" text-anchor="middle" font-size="12" font-weight="700" fill="#38bdf8">BỘ LỌC VÒNG ĐỜI VẾT (FSM)</text>
+    <text x="500" y="489" text-anchor="middle" font-size="11" fill="#cbd5e1">Xóa track mất dấu • Chỉ giữ track xuất hiện ≥ 2 frame</text>
+  </g>
+
+  <!-- Mũi tên xuống Output -->
+  <path d="M 500 500 L 500 535" fill="none" stroke="#14b8a6" stroke-width="2.5" marker-end="url(#arr-gray)"/>
+
+  <!-- ================= 7. ĐẦU RA SANG SENSOR FUSION ================= -->
+  <g filter="url(#card-shadow)">
+    <rect x="300" y="535" width="400" height="56" rx="10" fill="url(#grad-out)" stroke="#2dd4bf" stroke-width="2"/>
+    <text x="500" y="559" text-anchor="middle" font-size="14" font-weight="700" fill="#ffffff">DANH SÁCH TRACKS XUẤT XƯỞNG</text>
+    <text x="500" y="577" text-anchor="middle" font-size="12" fill="#ccfbf1">Gửi sang Sensor Fusion &amp; Risk Engine • Bật bám vết im lặng</text>
+  </g>
+</svg>
