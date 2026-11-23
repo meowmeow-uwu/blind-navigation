@@ -1,0 +1,58 @@
+{
+  "yolov8n": {
+    "model": "yolov8n",
+    "format": "ncnn_fp32",
+    "imgsz": 320,
+    "target_dir": "/home/dutai/pbl6-blind-navigation/blind-navigation/1_model_development/weights/ncnn/yolov8n_ncnn_fp32",
+    "param_files": [
+      "model.ncnn.param"
+    ],
+    "bin_files": [
+      "model.ncnn.bin"
+    ],
+    "total_size_mb": 11.52,
+    "status": "converted"
+  },
+  "yolov9t": {
+    "model": "yolov9t",
+    "format": "ncnn_fp32",
+    "imgsz": 320,
+    "target_dir": "/home/dutai/pbl6-blind-navigation/blind-navigation/1_model_development/weights/ncnn/yolov9t_ncnn_fp32",
+    "param_files": [
+      "model.ncnn.param"
+    ],
+    "bin_files": [
+      "model.ncnn.bin"
+    ],
+    "total_size_mb": 7.6,
+    "status": "converted"
+  },
+  "yolov12n": {
+    "model": "yolov12n",
+    "format": "ncnn_fp32",
+    "imgsz": 320,
+    "target_dir": "/home/dutai/pbl6-blind-navigation/blind-navigation/1_model_development/weights/ncnn/yolov12n_ncnn_fp32",
+    "param_files": [
+      "model.ncnn.param"
+    ],
+    "bin_files": [
+      "model.ncnn.bin"
+    ],
+    "total_size_mb": 9.83,
+    "status": "converted"
+  },
+  "yolov26n": {
+    "model": "yolov26n",
+    "format": "ncnn_fp32",
+    "imgsz": 320,
+    "target_dir": "/home/dutai/pbl6-blind-navigation/blind-navigation/1_model_development/weights/ncnn/yolov26n_ncnn_fp32",
+    "param_files": [
+      "model.ncnn.param"
+    ],
+    "bin_files": [
+      "model.ncnn.bin"
+    ],
+    "total_size_mb": 9.13,
+    "status": "converted"
+  }
+}

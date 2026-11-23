@@ -1,0 +1,79 @@
+{
+  "test_image": "assets/smoke_test.jpg",
+  "confidence_threshold": 0.25,
+  "nms_iou_threshold": 0.45,
+  "total_models": 4,
+  "passed": 4,
+  "failed": 0,
+  "not_found": 0,
+  "results": {
+    "yolov8n": {
+      "model": "yolov8n_320_fp32",
+      "onnx_path": "weights/onnx/yolov8n_320_fp32.onnx",
+      "status": "passed",
+      "error": null,
+      "load_ms": 54.55,
+      "inference_ms": 22.97,
+      "detections": 4,
+      "checks": {
+        "load_successful": true,
+        "inference_successful": true,
+        "no_nan_inf": true,
+        "valid_confidences": true,
+        "valid_bboxes": true,
+        "valid_class_ids": true
+      }
+    },
+    "yolo11n": {
+      "model": "yolo11n_320_fp32",
+      "onnx_path": "weights/onnx/yolo11n_320_fp32.onnx",
+      "status": "passed",
+      "error": null,
+      "load_ms": 40.61,
+      "inference_ms": 16.94,
+      "detections": 5,
+      "checks": {
+        "load_successful": true,
+        "inference_successful": true,
+        "no_nan_inf": true,
+        "valid_confidences": true,
+        "valid_bboxes": true,
+        "valid_class_ids": true
+      }
+    },
+    "yolo12n": {
+      "model": "yolo12n_320_fp32",
+      "onnx_path": "weights/onnx/yolo12n_320_fp32.onnx",
+      "status": "passed",
+      "error": null,
+      "load_ms": 60.03,
+      "inference_ms": 18.48,
+      "detections": 4,
+      "checks": {
+        "load_successful": true,
+        "inference_successful": true,
+        "no_nan_inf": true,
+        "valid_confidences": true,
+        "valid_bboxes": true,
+        "valid_class_ids": true
+      }
+    },
+    "yolo26n": {
+      "model": "yolo26n_320_fp32",
+      "onnx_path": "weights/onnx/yolo26n_320_fp32.onnx",
+      "status": "passed",
+      "error": null,
+      "load_ms": 47.35,
+      "inference_ms": 15.66,
+      "detections": 5,
+      "checks": {
+        "load_successful": true,
+        "inference_successful": true,
+        "no_nan_inf": true,
+        "valid_confidences": true,
+        "valid_bboxes": true,
+        "valid_class_ids": true
+      }
+    }
+  }
+}

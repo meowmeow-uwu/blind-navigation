@@ -1,0 +1,952 @@
+{
+  "manifest": "blind-navigation/1_model_development/weights/manifest.json",
+  "total": 28,
+  "passed": 28,
+  "failed": 0,
+  "results": [
+    {
+      "artifact": "blind-navigation/1_model_development/weights/onnx/yolov8n_320_fp32.onnx",
+      "imgsz": 320,
+      "tests": {
+        "file_exists": {
+          "passed": true
+        },
+        "sha256": {
+          "passed": true,
+          "expected": "265be07a90a6087b1418002becf79ebf12e7209dc4939028ca6daeed43200c83",
+          "actual": "265be07a90a6087b1418002becf79ebf12e7209dc4939028ca6daeed43200c83"
+        },
+        "model_loads": {
+          "passed": true
+        },
+        "inference_runs": {
+          "passed": true,
+          "num_outputs": 1
+        },
+        "no_nan_inf": {
+          "passed": true
+        },
+        "schema_ok": {
+          "passed": true
+        },
+        "boxes_in_bounds": {
+          "passed": true,
+          "num_detections": 2100
+        }
+      },
+      "passed": true
+    },
+    {
+      "artifact": "blind-navigation/1_model_development/weights/int8/yolov8n_320_int8.onnx",
+      "imgsz": 320,
+      "tests": {
+        "file_exists": {
+          "passed": true
+        },
+        "sha256": {
+          "passed": true,
+          "expected": "34e8fd11c869020e495dd7488ccd7296db5852469ec6ebf74da7b73a7e1dfbc3",
+          "actual": "34e8fd11c869020e495dd7488ccd7296db5852469ec6ebf74da7b73a7e1dfbc3"
+        },
+        "model_loads": {
+          "passed": true
+        },
+        "inference_runs": {
+          "passed": true,
+          "num_outputs": 1
+        },
+        "no_nan_inf": {
+          "passed": true
+        },
+        "schema_ok": {
+          "passed": true
+        },
+        "boxes_in_bounds": {
+          "passed": true,
+          "num_detections": 2100
+        }
+      },
+      "passed": true
+    },
+    {
+      "artifact": "blind-navigation/1_model_development/weights/onnx/yolov8n_rod_640_onnx_fp32.onnx",
+      "imgsz": 640,
+      "tests": {
+        "file_exists": {
+          "passed": true
+        },
+        "sha256": {
+          "passed": true,
+          "expected": "302fb77a962510357df0024117c2ea6c7eb401ff0d6bbbdaec8b29e62c4513f1",
+          "actual": "302fb77a962510357df0024117c2ea6c7eb401ff0d6bbbdaec8b29e62c4513f1"
+        },
+        "model_loads": {
+          "passed": true
+        },
+        "inference_runs": {
+          "passed": true,
+          "num_outputs": 1
+        },
+        "no_nan_inf": {
+          "passed": true
+        },
+        "schema_ok": {
+          "passed": true
+        },
+        "boxes_in_bounds": {
+          "passed": true,
+          "num_detections": 8400
+        }
+      },
+      "passed": true
+    },
+    {
+      "artifact": "blind-navigation/1_model_development/weights/int8/yolov8n_rod_640_onnx_int8.onnx",
+      "imgsz": 640,
+      "tests": {
+        "file_exists": {
+          "passed": true
+        },
+        "sha256": {
+          "passed": true,
+          "expected": "5555184c898341435b7fe4d6831ed02fb3bf6ef524b46427f8ce462aa14bf1bf",
+          "actual": "5555184c898341435b7fe4d6831ed02fb3bf6ef524b46427f8ce462aa14bf1bf"
+        },
+        "model_loads": {
+          "passed": true
+        },
+        "inference_runs": {
+          "passed": true,
+          "num_outputs": 1
+        },
+        "no_nan_inf": {
+          "passed": true
+        },
+        "schema_ok": {
+          "passed": true
+        },
+        "boxes_in_bounds": {
+          "passed": true,
+          "num_detections": 8400
+        }
+      },
+      "passed": true
+    },
+    {
+      "artifact": "blind-navigation/1_model_development/weights/int8/yolov8n_320_int8.onnx",
+      "imgsz": 320,
+      "tests": {
+        "file_exists": {
+          "passed": true
+        },
+        "sha256": {
+          "passed": true,
+          "expected": "34e8fd11c869020e495dd7488ccd7296db5852469ec6ebf74da7b73a7e1dfbc3",
+          "actual": "34e8fd11c869020e495dd7488ccd7296db5852469ec6ebf74da7b73a7e1dfbc3"
+        },
+        "model_loads": {
+          "passed": true
+        },
+        "inference_runs": {
+          "passed": true,
+          "num_outputs": 1
+        },
+        "no_nan_inf": {
+          "passed": true
+        },
+        "schema_ok": {
+          "passed": true
+        },
+        "boxes_in_bounds": {
+          "passed": true,
+          "num_detections": 2100
+        }
+      },
+      "passed": true
+    },
+    {
+      "artifact": "yolov8n_rod_640_ncnn_fp32.param / yolov8n_rod_640_ncnn_fp32.bin",
+      "imgsz": 640,
+      "tests": {
+        "files_exist": {
+          "passed": true,
+          "param_exists": true,
+          "bin_exists": true
+        },
+        "sha256_param": {
+          "passed": true,
+          "expected": "11a0c2e1e727367c92464969b031611599b8219f08ffc0fbe59ee71b8cb95396",
+          "actual": "11a0c2e1e727367c92464969b031611599b8219f08ffc0fbe59ee71b8cb95396"
+        },
+        "sha256_bin": {
+          "passed": true,
+          "expected": "08c610603883146a514e19f1fd950f3510ccb74edbcd36e9be018ab4e1ef41b6",
+          "actual": "08c610603883146a514e19f1fd950f3510ccb74edbcd36e9be018ab4e1ef41b6"
+        },
+        "model_loads": {
+          "passed": true
+        },
+        "inference_runs": {
+          "passed": true
+        },
+        "no_nan_inf": {
+          "passed": true
+        },
+        "schema_ok": {
+          "passed": true
+        },
+        "boxes_in_bounds": {
+          "passed": true,
+          "num_detections": 8400
+        }
+      },
+      "passed": true
+    },
+    {
+      "artifact": "model.ncnn.param / model.ncnn.bin",
+      "imgsz": 320,
+      "tests": {
+        "files_exist": {
+          "passed": true,
+          "param_exists": true,
+          "bin_exists": true
+        },
+        "sha256_param": {
+          "passed": true,
+          "expected": "5138e6814dbb391bc89b83cd5ed1180f35035fe3931957c48ca4939ff388a718",
+          "actual": "5138e6814dbb391bc89b83cd5ed1180f35035fe3931957c48ca4939ff388a718"
+        },
+        "sha256_bin": {
+          "passed": true,
+          "expected": "97db988f23474c5968b402e42d8e960a9088b27a572e9c970fad5ba14d6b3fc4",
+          "actual": "97db988f23474c5968b402e42d8e960a9088b27a572e9c970fad5ba14d6b3fc4"
+        },
+        "model_loads": {
+          "passed": true
+        },
+        "inference_runs": {
+          "passed": true
+        },
+        "no_nan_inf": {
+          "passed": true
+        },
+        "schema_ok": {
+          "passed": true
+        },
+        "boxes_in_bounds": {
+          "passed": true,
+          "num_detections": 2100
+        }
+      },
+      "passed": true
+    },
+    {
+      "artifact": "blind-navigation/1_model_development/weights/onnx/yolov9t_320_fp32.onnx",
+      "imgsz": 320,
+      "tests": {
+        "file_exists": {
+          "passed": true
+        },
+        "sha256": {
+          "passed": true,
+          "expected": "66bbc5719bd664dcbc17ba9a619b423485a392a3bd8e05624b53cffdac13169d",
+          "actual": "66bbc5719bd664dcbc17ba9a619b423485a392a3bd8e05624b53cffdac13169d"
+        },
+        "model_loads": {
+          "passed": true
+        },
+        "inference_runs": {
+          "passed": true,
+          "num_outputs": 1
+        },
+        "no_nan_inf": {
+          "passed": true
+        },
+        "schema_ok": {
+          "passed": true
+        },
+        "boxes_in_bounds": {
+          "passed": true,
+          "num_detections": 2100
+        }
+      },
+      "passed": true
+    },
+    {
+      "artifact": "blind-navigation/1_model_development/weights/int8/yolov9t_320_int8.onnx",
+      "imgsz": 320,
+      "tests": {
+        "file_exists": {
+          "passed": true
+        },
+        "sha256": {
+          "passed": true,
+          "expected": "c8e162a343c6f02e057b257a4d2e06b8fb17b6becbedc302b373a78757807ac4",
+          "actual": "c8e162a343c6f02e057b257a4d2e06b8fb17b6becbedc302b373a78757807ac4"
+        },
+        "model_loads": {
+          "passed": true
+        },
+        "inference_runs": {
+          "passed": true,
+          "num_outputs": 1
+        },
+        "no_nan_inf": {
+          "passed": true
+        },
+        "schema_ok": {
+          "passed": true
+        },
+        "boxes_in_bounds": {
+          "passed": true,
+          "num_detections": 2100
+        }
+      },
+      "passed": true
+    },
+    {
+      "artifact": "blind-navigation/1_model_development/weights/onnx/yolov9t_rod_640_onnx_fp32.onnx",
+      "imgsz": 640,
+      "tests": {
+        "file_exists": {
+          "passed": true
+        },
+        "sha256": {
+          "passed": true,
+          "expected": "75cc66857fe963be2c8fd7123ec917290da97efff3ed05aefc090f77bf633b08",
+          "actual": "75cc66857fe963be2c8fd7123ec917290da97efff3ed05aefc090f77bf633b08"
+        },
+        "model_loads": {
+          "passed": true
+        },
+        "inference_runs": {
+          "passed": true,
+          "num_outputs": 1
+        },
+        "no_nan_inf": {
+          "passed": true
+        },
+        "schema_ok": {
+          "passed": true
+        },
+        "boxes_in_bounds": {
+          "passed": true,
+          "num_detections": 8400
+        }
+      },
+      "passed": true
+    },
+    {
+      "artifact": "blind-navigation/1_model_development/weights/int8/yolov9t_rod_640_onnx_int8.onnx",
+      "imgsz": 640,
+      "tests": {
+        "file_exists": {
+          "passed": true
+        },
+        "sha256": {
+          "passed": true,
+          "expected": "9493b5fe275c7191b156e3c51adea6e82a8bd8bb20195025c7e728ea4117a6f5",
+          "actual": "9493b5fe275c7191b156e3c51adea6e82a8bd8bb20195025c7e728ea4117a6f5"
+        },
+        "model_loads": {
+          "passed": true
+        },
+        "inference_runs": {
+          "passed": true,
+          "num_outputs": 1
+        },
+        "no_nan_inf": {
+          "passed": true
+        },
+        "schema_ok": {
+          "passed": true
+        },
+        "boxes_in_bounds": {
+          "passed": true,
+          "num_detections": 8400
+        }
+      },
+      "passed": true
+    },
+    {
+      "artifact": "blind-navigation/1_model_development/weights/int8/yolov9t_320_int8.onnx",
+      "imgsz": 320,
+      "tests": {
+        "file_exists": {
+          "passed": true
+        },
+        "sha256": {
+          "passed": true,
+          "expected": "c8e162a343c6f02e057b257a4d2e06b8fb17b6becbedc302b373a78757807ac4",
+          "actual": "c8e162a343c6f02e057b257a4d2e06b8fb17b6becbedc302b373a78757807ac4"
+        },
+        "model_loads": {
+          "passed": true
+        },
+        "inference_runs": {
+          "passed": true,
+          "num_outputs": 1
+        },
+        "no_nan_inf": {
+          "passed": true
+        },
+        "schema_ok": {
+          "passed": true
+        },
+        "boxes_in_bounds": {
+          "passed": true,
+          "num_detections": 2100
+        }
+      },
+      "passed": true
+    },
+    {
+      "artifact": "yolov9t_rod_640_ncnn_fp32.param / yolov9t_rod_640_ncnn_fp32.bin",
+      "imgsz": 640,
+      "tests": {
+        "files_exist": {
+          "passed": true,
+          "param_exists": true,
+          "bin_exists": true
+        },
+        "sha256_param": {
+          "passed": true,
+          "expected": "81fde25f6d606df7e272549f7203fbca900a388795f409bf506078cb58ef4b70",
+          "actual": "81fde25f6d606df7e272549f7203fbca900a388795f409bf506078cb58ef4b70"
+        },
+        "sha256_bin": {
+          "passed": true,
+          "expected": "bcba42dc0ee53fa5b1003941827fc34c97769cbc8033002ee670fbf5a1d30d0f",
+          "actual": "bcba42dc0ee53fa5b1003941827fc34c97769cbc8033002ee670fbf5a1d30d0f"
+        },
+        "model_loads": {
+          "passed": true
+        },
+        "inference_runs": {
+          "passed": true
+        },
+        "no_nan_inf": {
+          "passed": true
+        },
+        "schema_ok": {
+          "passed": true
+        },
+        "boxes_in_bounds": {
+          "passed": true,
+          "num_detections": 8400
+        }
+      },
+      "passed": true
+    },
+    {
+      "artifact": "model.ncnn.param / model.ncnn.bin",
+      "imgsz": 320,
+      "tests": {
+        "files_exist": {
+          "passed": true,
+          "param_exists": true,
+          "bin_exists": true
+        },
+        "sha256_param": {
+          "passed": true,
+          "expected": "3495707d6772757bbe6c44ab69201183878f03a61e5ff085ca4181930ef2eaec",
+          "actual": "3495707d6772757bbe6c44ab69201183878f03a61e5ff085ca4181930ef2eaec"
+        },
+        "sha256_bin": {
+          "passed": true,
+          "expected": "ad46fb9eb4209943f8b4ff361111874909b103554abfd913f27d9c076a9ac4d4",
+          "actual": "ad46fb9eb4209943f8b4ff361111874909b103554abfd913f27d9c076a9ac4d4"
+        },
+        "model_loads": {
+          "passed": true
+        },
+        "inference_runs": {
+          "passed": true
+        },
+        "no_nan_inf": {
+          "passed": true
+        },
+        "schema_ok": {
+          "passed": true
+        },
+        "boxes_in_bounds": {
+          "passed": true,
+          "num_detections": 2100
+        }
+      },
+      "passed": true
+    },
+    {
+      "artifact": "blind-navigation/1_model_development/weights/onnx/yolov12n_320_fp32.onnx",
+      "imgsz": 320,
+      "tests": {
+        "file_exists": {
+          "passed": true
+        },
+        "sha256": {
+          "passed": true,
+          "expected": "e045a111a126e04d11695d051e05e2aa2eae24dded649760fdfbb539e1009753",
+          "actual": "e045a111a126e04d11695d051e05e2aa2eae24dded649760fdfbb539e1009753"
+        },
+        "model_loads": {
+          "passed": true
+        },
+        "inference_runs": {
+          "passed": true,
+          "num_outputs": 1
+        },
+        "no_nan_inf": {
+          "passed": true
+        },
+        "schema_ok": {
+          "passed": true
+        },
+        "boxes_in_bounds": {
+          "passed": true,
+          "num_detections": 2100
+        }
+      },
+      "passed": true
+    },
+    {
+      "artifact": "blind-navigation/1_model_development/weights/int8/yolov12n_320_int8.onnx",
+      "imgsz": 320,
+      "tests": {
+        "file_exists": {
+          "passed": true
+        },
+        "sha256": {
+          "passed": true,
+          "expected": "d9fd1f168ef219a350217c26a31f954d859f541c5a83b4ef910b9a5b66866980",
+          "actual": "d9fd1f168ef219a350217c26a31f954d859f541c5a83b4ef910b9a5b66866980"
+        },
+        "model_loads": {
+          "passed": true
+        },
+        "inference_runs": {
+          "passed": true,
+          "num_outputs": 1
+        },
+        "no_nan_inf": {
+          "passed": true
+        },
+        "schema_ok": {
+          "passed": true
+        },
+        "boxes_in_bounds": {
+          "passed": true,
+          "num_detections": 2100
+        }
+      },
+      "passed": true
+    },
+    {
+      "artifact": "blind-navigation/1_model_development/weights/onnx/yolov12n_rod_640_onnx_fp32.onnx",
+      "imgsz": 640,
+      "tests": {
+        "file_exists": {
+          "passed": true
+        },
+        "sha256": {
+          "passed": true,
+          "expected": "31393e6a369fd2e007628b7f76343f79a24b6e65b95300def5e005ac83b348e0",
+          "actual": "31393e6a369fd2e007628b7f76343f79a24b6e65b95300def5e005ac83b348e0"
+        },
+        "model_loads": {
+          "passed": true
+        },
+        "inference_runs": {
+          "passed": true,
+          "num_outputs": 1
+        },
+        "no_nan_inf": {
+          "passed": true
+        },
+        "schema_ok": {
+          "passed": true
+        },
+        "boxes_in_bounds": {
+          "passed": true,
+          "num_detections": 8400
+        }
+      },
+      "passed": true
+    },
+    {
+      "artifact": "blind-navigation/1_model_development/weights/int8/yolov12n_rod_640_onnx_int8.onnx",
+      "imgsz": 640,
+      "tests": {
+        "file_exists": {
+          "passed": true
+        },
+        "sha256": {
+          "passed": true,
+          "expected": "fdb659c91e3321df42aa551ca17e5bed99524daa0c601f5bd0d582a065a1b1b6",
+          "actual": "fdb659c91e3321df42aa551ca17e5bed99524daa0c601f5bd0d582a065a1b1b6"
+        },
+        "model_loads": {
+          "passed": true
+        },
+        "inference_runs": {
+          "passed": true,
+          "num_outputs": 1
+        },
+        "no_nan_inf": {
+          "passed": true
+        },
+        "schema_ok": {
+          "passed": true
+        },
+        "boxes_in_bounds": {
+          "passed": true,
+          "num_detections": 8400
+        }
+      },
+      "passed": true
+    },
+    {
+      "artifact": "blind-navigation/1_model_development/weights/int8/yolov12n_320_int8.onnx",
+      "imgsz": 320,
+      "tests": {
+        "file_exists": {
+          "passed": true
+        },
+        "sha256": {
+          "passed": true,
+          "expected": "d9fd1f168ef219a350217c26a31f954d859f541c5a83b4ef910b9a5b66866980",
+          "actual": "d9fd1f168ef219a350217c26a31f954d859f541c5a83b4ef910b9a5b66866980"
+        },
+        "model_loads": {
+          "passed": true
+        },
+        "inference_runs": {
+          "passed": true,
+          "num_outputs": 1
+        },
+        "no_nan_inf": {
+          "passed": true
+        },
+        "schema_ok": {
+          "passed": true
+        },
+        "boxes_in_bounds": {
+          "passed": true,
+          "num_detections": 2100
+        }
+      },
+      "passed": true
+    },
+    {
+      "artifact": "yolov12n_rod_640_ncnn_fp32.param / yolov12n_rod_640_ncnn_fp32.bin",
+      "imgsz": 640,
+      "tests": {
+        "files_exist": {
+          "passed": true,
+          "param_exists": true,
+          "bin_exists": true
+        },
+        "sha256_param": {
+          "passed": true,
+          "expected": "87c1609aff13d4d0b79de50a7a90023776c0bee1397dfe05ea98240d72dfc2b0",
+          "actual": "87c1609aff13d4d0b79de50a7a90023776c0bee1397dfe05ea98240d72dfc2b0"
+        },
+        "sha256_bin": {
+          "passed": true,
+          "expected": "5c5f71fb781a6e0652ffef632ce8127c311377f75c3bcee127a68796b1c31873",
+          "actual": "5c5f71fb781a6e0652ffef632ce8127c311377f75c3bcee127a68796b1c31873"
+        },
+        "model_loads": {
+          "passed": true
+        },
+        "inference_runs": {
+          "passed": true
+        },
+        "no_nan_inf": {
+          "passed": true
+        },
+        "schema_ok": {
+          "passed": true
+        },
+        "boxes_in_bounds": {
+          "passed": true,
+          "num_detections": 8400
+        }
+      },
+      "passed": true
+    },
+    {
+      "artifact": "model.ncnn.param / model.ncnn.bin",
+      "imgsz": 320,
+      "tests": {
+        "files_exist": {
+          "passed": true,
+          "param_exists": true,
+          "bin_exists": true
+        },
+        "sha256_param": {
+          "passed": true,
+          "expected": "5492ebbedfbeee0dec0db02c2b362cee7866cc96f65f89cf1bf020a7458edb98",
+          "actual": "5492ebbedfbeee0dec0db02c2b362cee7866cc96f65f89cf1bf020a7458edb98"
+        },
+        "sha256_bin": {
+          "passed": true,
+          "expected": "86ea0220a3f5dafbd7d5d15d4120a3f9a07a459ec48084bdb713a679740d8737",
+          "actual": "86ea0220a3f5dafbd7d5d15d4120a3f9a07a459ec48084bdb713a679740d8737"
+        },
+        "model_loads": {
+          "passed": true
+        },
+        "inference_runs": {
+          "passed": true
+        },
+        "no_nan_inf": {
+          "passed": true
+        },
+        "schema_ok": {
+          "passed": true
+        },
+        "boxes_in_bounds": {
+          "passed": true,
+          "num_detections": 2100
+        }
+      },
+      "passed": true
+    },
+    {
+      "artifact": "blind-navigation/1_model_development/weights/onnx/yolov26n_320_fp32.onnx",
+      "imgsz": 320,
+      "tests": {
+        "file_exists": {
+          "passed": true
+        },
+        "sha256": {
+          "passed": true,
+          "expected": "198e70d734623e910c79bd46e58b4e5f315b5ac9edb6d13270f6df969837108a",
+          "actual": "198e70d734623e910c79bd46e58b4e5f315b5ac9edb6d13270f6df969837108a"
+        },
+        "model_loads": {
+          "passed": true
+        },
+        "inference_runs": {
+          "passed": true,
+          "num_outputs": 1
+        },
+        "no_nan_inf": {
+          "passed": true
+        },
+        "schema_ok": {
+          "passed": true
+        },
+        "boxes_in_bounds": {
+          "passed": true,
+          "num_detections": 300
+        }
+      },
+      "passed": true
+    },
+    {
+      "artifact": "blind-navigation/1_model_development/weights/int8/yolov26n_320_int8.onnx",
+      "imgsz": 320,
+      "tests": {
+        "file_exists": {
+          "passed": true
+        },
+        "sha256": {
+          "passed": true,
+          "expected": "04cc86fe63363fe3d9415f1ea928e7b9eaa31564b52a57d4d00dda8ffa5e9fd2",
+          "actual": "04cc86fe63363fe3d9415f1ea928e7b9eaa31564b52a57d4d00dda8ffa5e9fd2"
+        },
+        "model_loads": {
+          "passed": true
+        },
+        "inference_runs": {
+          "passed": true,
+          "num_outputs": 1
+        },
+        "no_nan_inf": {
+          "passed": true
+        },
+        "schema_ok": {
+          "passed": true
+        },
+        "boxes_in_bounds": {
+          "passed": true,
+          "num_detections": 2100
+        }
+      },
+      "passed": true
+    },
+    {
+      "artifact": "blind-navigation/1_model_development/weights/onnx/yolov26n_rod_640_onnx_fp32.onnx",
+      "imgsz": 640,
+      "tests": {
+        "file_exists": {
+          "passed": true
+        },
+        "sha256": {
+          "passed": true,
+          "expected": "911b75dccd635238727581f5140c1f74df666d3a14fdd5c296fb5a683bc38374",
+          "actual": "911b75dccd635238727581f5140c1f74df666d3a14fdd5c296fb5a683bc38374"
+        },
+        "model_loads": {
+          "passed": true
+        },
+        "inference_runs": {
+          "passed": true,
+          "num_outputs": 1
+        },
+        "no_nan_inf": {
+          "passed": true
+        },
+        "schema_ok": {
+          "passed": true
+        },
+        "boxes_in_bounds": {
+          "passed": true,
+          "num_detections": 300
+        }
+      },
+      "passed": true
+    },
+    {
+      "artifact": "blind-navigation/1_model_development/weights/int8/yolov26n_rod_640_onnx_int8.onnx",
+      "imgsz": 640,
+      "tests": {
+        "file_exists": {
+          "passed": true
+        },
+        "sha256": {
+          "passed": true,
+          "expected": "79a5c28c2bdf3bdadeea5e1eda5e054f76351d14840611ae4ea936dcf82c28d0",
+          "actual": "79a5c28c2bdf3bdadeea5e1eda5e054f76351d14840611ae4ea936dcf82c28d0"
+        },
+        "model_loads": {
+          "passed": true
+        },
+        "inference_runs": {
+          "passed": true,
+          "num_outputs": 1
+        },
+        "no_nan_inf": {
+          "passed": true
+        },
+        "schema_ok": {
+          "passed": true
+        },
+        "boxes_in_bounds": {
+          "passed": true,
+          "num_detections": 8400
+        }
+      },
+      "passed": true
+    },
+    {
+      "artifact": "blind-navigation/1_model_development/weights/int8/yolov26n_320_int8.onnx",
+      "imgsz": 320,
+      "tests": {
+        "file_exists": {
+          "passed": true
+        },
+        "sha256": {
+          "passed": true,
+          "expected": "04cc86fe63363fe3d9415f1ea928e7b9eaa31564b52a57d4d00dda8ffa5e9fd2",
+          "actual": "04cc86fe63363fe3d9415f1ea928e7b9eaa31564b52a57d4d00dda8ffa5e9fd2"
+        },
+        "model_loads": {
+          "passed": true
+        },
+        "inference_runs": {
+          "passed": true,
+          "num_outputs": 1
+        },
+        "no_nan_inf": {
+          "passed": true
+        },
+        "schema_ok": {
+          "passed": true
+        },
+        "boxes_in_bounds": {
+          "passed": true,
+          "num_detections": 2100
+        }
+      },
+      "passed": true
+    },
+    {
+      "artifact": "yolov26n_rod_640_ncnn_fp32.param / yolov26n_rod_640_ncnn_fp32.bin",
+      "imgsz": 640,
+      "tests": {
+        "files_exist": {
+          "passed": true,
+          "param_exists": true,
+          "bin_exists": true
+        },
+        "sha256_param": {
+          "passed": true,
+          "expected": "120cb871e0dde4dbc3a8d36518a7aebfa55d79bd379a2aceaa1cd4fc9f361612",
+          "actual": "120cb871e0dde4dbc3a8d36518a7aebfa55d79bd379a2aceaa1cd4fc9f361612"
+        },
+        "sha256_bin": {
+          "passed": true,
+          "expected": "a86d8c481809be2ddb0729bb436a4d28f94110a62009303120bca91af6c37964",
+          "actual": "a86d8c481809be2ddb0729bb436a4d28f94110a62009303120bca91af6c37964"
+        },
+        "model_loads": {
+          "passed": true
+        },
+        "inference_runs": {
+          "passed": true
+        },
+        "no_nan_inf": {
+          "passed": true
+        },
+        "schema_ok": {
+          "passed": true
+        },
+        "boxes_in_bounds": {
+          "passed": true,
+          "num_detections": 8400
+        }
+      },
+      "passed": true
+    },
+    {
+      "artifact": "model.ncnn.param / model.ncnn.bin",
+      "imgsz": 320,
+      "tests": {
+        "files_exist": {
+          "passed": true,
+          "param_exists": true,
+          "bin_exists": true
+        },
+        "sha256_param": {
+          "passed": true,
+          "expected": "95113dec2b64eb03a0c9d4db6842ed249eea44866073eb3c0754c6d198e6c7df",
+          "actual": "95113dec2b64eb03a0c9d4db6842ed249eea44866073eb3c0754c6d198e6c7df"
+        },
+        "sha256_bin": {
+          "passed": true,
+          "expected": "87c0e712e111a61933b04c617de225ee27ee07403ddd7d6cb731eaebe02d3af9",
+          "actual": "87c0e712e111a61933b04c617de225ee27ee07403ddd7d6cb731eaebe02d3af9"
+        },
+        "model_loads": {
+          "passed": true
+        },
+        "inference_runs": {
+          "passed": true
+        },
+        "no_nan_inf": {
+          "passed": true
+        },
+        "schema_ok": {
+          "passed": true
+        },
+        "boxes_in_bounds": {
+          "passed": true,
+          "num_detections": 2100
+        }
+      },
+      "passed": true
+    }
+  ]
+}

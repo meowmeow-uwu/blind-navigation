@@ -1,0 +1,55 @@
+{
+  "generated_at": "2026-11-10T13:55:37.099302+00:00",
+  "all_candidates": [
+    {
+      "model": "yolov8n",
+      "recall": 0.8677135447354749,
+      "latency_p50_ms": 9.57,
+      "mAP50": 0.9098874877223397,
+      "mAP50_95": 0.7419336649976312
+    },
+    {
+      "model": "yolov9t",
+      "recall": 0.8831367778086257,
+      "latency_p50_ms": 10.61,
+      "mAP50": 0.919018635031576,
+      "mAP50_95": 0.7716659084263741
+    },
+    {
+      "model": "yolov12n",
+      "recall": 0.8879474832869263,
+      "latency_p50_ms": 9.7,
+      "mAP50": 0.9112156573328629,
+      "mAP50_95": 0.7607597136573565
+    },
+    {
+      "model": "yolov26n",
+      "recall": 0.8887775540870209,
+      "latency_p50_ms": 9.51,
+      "mAP50": 0.916301567146553,
+      "mAP50_95": 0.7711000706844575
+    }
+  ],
+  "pareto_frontier": [
+    {
+      "model": "yolov26n",
+      "recall": 0.8887775540870209,
+      "latency_p50_ms": 9.51,
+      "mAP50": 0.916301567146553,
+      "mAP50_95": 0.7711000706844575
+    }
+  ],
+  "selected_configurations": [
+    "yolov26n"
+  ],
+  "int8_quantization_results": {
+    "yolov26n": {
+      "model": "yolov26n",
+      "int8_model_path": "/home/dutai/pbl6-blind-navigation/blind-navigation/1_model_development/weights/int8/yolov26n_320_int8.onnx",
+      "size_mb": 2.77,
+      "latency_p50_ms": 15.95,
+      "fp32_latency_p50_ms": 9.51,
+      "speedup_factor": 0.6
+    }
+  }
+}

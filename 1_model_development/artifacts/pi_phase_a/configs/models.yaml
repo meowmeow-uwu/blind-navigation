@@ -1,0 +1,26 @@
+defaults:
+  task: detect
+  input_size: 320
+  batch_size: 1
+  device: cpu
+
+models:
+  yolov8n:
+    checkpoint: yolov8n.pt
+    enabled: true
+    role: baseline
+
+  yolo11n:
+    checkpoint: yolo11n.pt
+    enabled: true
+    role: stable_recent
+
+  yolo12n:
+    checkpoint: yolo12n.pt
+    enabled: true
+    role: recall_candidate
+
+  yolo26n:
+    checkpoint: yolo26n.pt
+    enabled: true
+    role: edge_candidate

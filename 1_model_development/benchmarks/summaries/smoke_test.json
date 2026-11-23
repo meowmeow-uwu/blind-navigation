@@ -1,0 +1,26 @@
+{
+  "yolov8n": {
+    "status": "passed",
+    "load_ms": 53,
+    "inference_ms": 16,
+    "detections": 4
+  },
+  "yolo11n": {
+    "status": "passed",
+    "load_ms": 118,
+    "inference_ms": 17,
+    "detections": 5
+  },
+  "yolo12n": {
+    "status": "passed",
+    "load_ms": 72,
+    "inference_ms": 24,
+    "detections": 4
+  },
+  "yolo26n": {
+    "status": "passed",
+    "load_ms": 66,
+    "inference_ms": 17,
+    "detections": 5
+  }
+}

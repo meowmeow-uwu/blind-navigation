@@ -1,0 +1,7 @@
+# Minimal headless dependencies for Raspberry Pi ONNX Benchmark
+numpy>=1.24.0
+onnx>=1.14.0
+onnxruntime>=1.15.0
+opencv-python-headless>=4.7.0
+PyYAML>=6.0
+psutil>=5.9.0

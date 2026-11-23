@@ -1,0 +1,42 @@
+{
+  "yolov8n": {
+    "model": "yolov8n",
+    "int8_model_path": "/home/dutai/pbl6-blind-navigation/blind-navigation/1_model_development/weights/int8/yolov8n_320_int8.onnx",
+    "ptq_method": "ultralytics_ptq_calibration",
+    "fp32_size_mb": 11.6,
+    "int8_size_mb": 3.19,
+    "compression_ratio": "3.64x",
+    "sha256": "34e8fd11c869020e495dd7488ccd7296db5852469ec6ebf74da7b73a7e1dfbc3",
+    "sanity_check": "passed"
+  },
+  "yolov9t": {
+    "model": "yolov9t",
+    "int8_model_path": "/home/dutai/pbl6-blind-navigation/blind-navigation/1_model_development/weights/int8/yolov9t_320_int8.onnx",
+    "ptq_method": "ultralytics_ptq_calibration",
+    "fp32_size_mb": 7.8,
+    "int8_size_mb": 2.65,
+    "compression_ratio": "2.94x",
+    "sha256": "c8e162a343c6f02e057b257a4d2e06b8fb17b6becbedc302b373a78757807ac4",
+    "sanity_check": "passed"
+  },
+  "yolov12n": {
+    "model": "yolov12n",
+    "int8_model_path": "/home/dutai/pbl6-blind-navigation/blind-navigation/1_model_development/weights/int8/yolov12n_320_int8.onnx",
+    "ptq_method": "ultralytics_ptq_calibration",
+    "fp32_size_mb": 9.97,
+    "int8_size_mb": 3.1,
+    "compression_ratio": "3.21x",
+    "sha256": "d9fd1f168ef219a350217c26a31f954d859f541c5a83b4ef910b9a5b66866980",
+    "sanity_check": "passed"
+  },
+  "yolov26n": {
+    "model": "yolov26n",
+    "int8_model_path": "/home/dutai/pbl6-blind-navigation/blind-navigation/1_model_development/weights/int8/yolov26n_320_int8.onnx",
+    "ptq_method": "ultralytics_ptq_calibration",
+    "fp32_size_mb": 9.25,
+    "int8_size_mb": 2.77,
+    "compression_ratio": "3.34x",
+    "sha256": "04cc86fe63363fe3d9415f1ea928e7b9eaa31564b52a57d4d00dda8ffa5e9fd2",
+    "sanity_check": "passed"
+  }
+}
