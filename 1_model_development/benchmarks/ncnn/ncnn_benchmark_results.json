@@ -1,0 +1,70 @@
+{
+  "yolov8n": {
+    "model": "yolov8n",
+    "format": "ncnn_fp32",
+    "imgsz": 320,
+    "runs": 30,
+    "latency": {
+      "mean_ms": 90.42,
+      "p50_ms": 14.49,
+      "p95_ms": 18.41,
+      "p99_ms": 1629.79
+    },
+    "environment": {
+      "ram_peak_mb": 911.1,
+      "start_temperature_c": 27.8,
+      "end_temperature_c": 27.8
+    }
+  },
+  "yolov9t": {
+    "model": "yolov9t",
+    "format": "ncnn_fp32",
+    "imgsz": 320,
+    "runs": 30,
+    "latency": {
+      "mean_ms": 251.79,
+      "p50_ms": 34.07,
+      "p95_ms": 1665.67,
+      "p99_ms": 2164.64
+    },
+    "environment": {
+      "ram_peak_mb": 982.4,
+      "start_temperature_c": 27.8,
+      "end_temperature_c": 27.8
+    }
+  },
+  "yolov12n": {
+    "model": "yolov12n",
+    "format": "ncnn_fp32",
+    "imgsz": 320,
+    "runs": 30,
+    "latency": {
+      "mean_ms": 287.4,
+      "p50_ms": 23.99,
+      "p95_ms": 1891.83,
+      "p99_ms": 2343.95
+    },
+    "environment": {
+      "ram_peak_mb": 1056.5,
+      "start_temperature_c": 27.8,
+      "end_temperature_c": 27.8
+    }
+  },
+  "yolov26n": {
+    "model": "yolov26n",
+    "format": "ncnn_fp32",
+    "imgsz": 320,
+    "runs": 30,
+    "latency": {
+      "mean_ms": 129.79,
+      "p50_ms": 22.18,
+      "p95_ms": 837.21,
+      "p99_ms": 1644.04
+    },
+    "environment": {
+      "ram_peak_mb": 1111.8,
+      "start_temperature_c": 27.8,
+      "end_temperature_c": 27.8
+    }
+  }
+}

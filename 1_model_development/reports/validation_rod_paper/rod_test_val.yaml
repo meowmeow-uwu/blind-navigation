@@ -1,0 +1,31 @@
+path: /home/dutai/pbl6-blind-navigation/blind-navigation/1_model_development/datasets/raw/ROD-Dataset/dataset/test
+train: /home/dutai/pbl6-blind-navigation/blind-navigation/1_model_development/datasets/raw/ROD-Dataset/dataset/test/images
+val: /home/dutai/pbl6-blind-navigation/blind-navigation/1_model_development/datasets/raw/ROD-Dataset/dataset/test/images
+test: /home/dutai/pbl6-blind-navigation/blind-navigation/1_model_development/datasets/raw/ROD-Dataset/dataset/test/images
+nc: 25
+names:
+- Bike
+- Building
+- Car
+- Person
+- Stairs
+- Traffic sign
+- Electrical Pole
+- Road
+- Motorcycle
+- Dustbin
+- Dog
+- Manhole
+- Tree
+- Guard rail
+- Pedestrian crosswalk
+- Truck
+- Bus
+- Bench
+- Traffic Cone
+- Fire hydrant
+- Teraffic Barrel
+- Plant Pot
+- Electrical Box
+- Chair
+- Bicycle Rack

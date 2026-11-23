@@ -1,0 +1,14 @@
+# Direct dependencies, pinned to the versions Phase A was run with.
+# Exact full environment (incl. transitive deps): requirements-lock.txt
+ultralytics==8.4.204
+torch==2.14.1
+torchvision==0.29.2
+onnx==1.23.2
+onnxruntime==1.23.2
+opencv-python==5.0.0.93
+numpy==2.2.6
+PyYAML==6.0.3
+psutil==7.2.2
+pandas==2.3.3
+tqdm==4.70.1
+pytest==9.2.0

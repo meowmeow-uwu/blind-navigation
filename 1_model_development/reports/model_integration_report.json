@@ -1,0 +1,202 @@
+{
+    "report_title": "Model Integration Report",
+    "generated_at": "2026-11-12",
+    "report_mode": "team_handoff_spec_with_existing_baseline",
+    "inference_or_soak_executed_for_this_report": false,
+    "accuracy_rebenchmarked": false,
+    "training_or_model_changes": false,
+    "handoff": {
+        "assigned_owner": "team member responsible for edge-model integration; name to be assigned by the team",
+        "report_recipient": "requester of this report",
+        "recipient_is_expected_to_run_checks": false,
+        "member_scope": "Integrate and verify the three selected artifacts on the target environment. Do not change model weights, train, or rerun accuracy evaluation.",
+        "return_deliverables": [
+            "Completed model_integration_report.md and model_integration_report.json with all pending statuses updated from evidence",
+            "Raw integration and 30-minute soak logs for each model",
+            "Target device, OS, Python, ONNX Runtime/NCNN versions and package revision",
+            "Actual artifact hashes and runtime load result",
+            "Output-schema, NaN/Inf, bounding-box and tracker handoff results",
+            "Crash, frame-error, empty-detection, temperature and throttling/undervoltage counts"
+        ],
+        "current_state": "Handoff specification prepared; runtime checks remain pending until the assigned member returns evidence."
+    },
+    "scope_note": "Historical Pi benchmark records are included as baseline context. They are not integration or 30-minute stability results.",
+    "output_contract": {
+        "class_id": "integer in [0, 24]",
+        "class_name": "string matching ROD class index",
+        "confidence": "finite numeric value in [0, 1]",
+        "bbox_xyxy": "[x1, y1, x2, y2], finite source-frame pixel coordinates with 0 <= x1 < x2 <= frame_width and 0 <= y1 < y2 <= frame_height"
+    },
+    "selected_models": [
+        {
+            "role": "accuracy_winner",
+            "model": "YOLO12n",
+            "runtime": "ONNX FP32",
+            "input_size": 320,
+            "manifest_key": "models.yolov12n.onnx_fp32_320",
+            "artifact": "pi_deployment_package/weights/onnx/yolov12n_320_fp32.onnx",
+            "sha256": "e045a111a126e04d11695d051e05e2aa2eae24dded649760fdfbb539e1009753",
+            "manifest_entry_present": true,
+            "manifest_accuracy_passed": true,
+            "manifest_or_artifact_load_test": "not_run",
+            "output_adapter": "raw",
+            "prior_pi_benchmark": {
+                "source": "pi_deployment_package/benchmarks_pi/benchmark_screening_full_320/yolov12n_onnx_fp32_320_benchmark_results.json",
+                "schedule": {
+                    "warmup": 30,
+                    "runs_per_repeat": 300,
+                    "repeats": 3,
+                    "threads": 4
+                },
+                "benchmark_status": "valid",
+                "timing_scope": "preprocess + inference + postprocess; image decode excluded",
+                "p50_ms": 122.202,
+                "p95_ms": 216.887,
+                "p99_ms": 280.169,
+                "fps_equivalent_from_p50": 8.183,
+                "fps_measured_end_to_end": null,
+                "peak_sampled_process_ram_mb": 117.53,
+                "system_cpu_mean_pct": 99.75,
+                "system_cpu_p95_pct": 100.0,
+                "temperature_start_c": 58.91,
+                "temperature_end_c": 59.4,
+                "throttling_or_undervoltage_at_sampled_boundaries": false
+            },
+            "integration_checks": {
+                "runtime_load_success": "not_run",
+                "output_schema_runtime_check": "not_run",
+                "nan_inf_runtime_check": "not_run",
+                "bbox_runtime_check": "not_run",
+                "tracker_handoff": "not_verified; tracker implementation is absent in modules/tracking",
+                "continuous_30_minute_stability": "not_run",
+                "crash_count": null,
+                "frame_error_count": null,
+                "unexpected_empty_detection_count": null,
+                "soak_throttling_or_undervoltage": "not_measured"
+            },
+            "suggested_command": "python blind-navigation/2_edge_device/best_model_inference.py --source pi_deployment_package/assets/sample_rod.jpg --model yolov12n --backend onnx --precision fp32"
+        },
+        {
+            "role": "edge_deployment_winner",
+            "model": "YOLO26n",
+            "runtime": "ONNX INT8",
+            "input_size": 320,
+            "manifest_key": "models.yolov26n.int8_ptq_320",
+            "artifact": "pi_deployment_package/weights/int8/yolov26n_320_int8.onnx",
+            "sha256": "04cc86fe63363fe3d9415f1ea928e7b9eaa31564b52a57d4d00dda8ffa5e9fd2",
+            "manifest_entry_present": true,
+            "manifest_accuracy_passed": true,
+            "manifest_or_artifact_load_test": "not_run",
+            "output_adapter": "e2e_nms",
+            "prior_pi_benchmark": {
+                "source": "pi_deployment_package/benchmarks_pi/benchmark_main_320/yolov26n_onnx_int8_320_benchmark_results.json",
+                "schedule": {
+                    "warmup": 50,
+                    "runs_per_repeat": 1000,
+                    "repeats": 3,
+                    "threads": 4
+                },
+                "benchmark_status": "valid",
+                "timing_scope": "preprocess + inference + postprocess; image decode excluded",
+                "p50_ms": 100.174,
+                "p95_ms": 123.857,
+                "p99_ms": 156.218,
+                "fps_equivalent_from_p50": 9.983,
+                "fps_measured_end_to_end": null,
+                "peak_sampled_process_ram_mb": 117.66,
+                "system_cpu_mean_pct": 99.77,
+                "system_cpu_p95_pct": 100.0,
+                "temperature_start_c": 59.89,
+                "temperature_end_c": 60.37,
+                "throttling_or_undervoltage_at_sampled_boundaries": false
+            },
+            "integration_checks": {
+                "runtime_load_success": "not_run",
+                "output_schema_runtime_check": "not_run",
+                "nan_inf_runtime_check": "not_run",
+                "bbox_runtime_check": "not_run",
+                "tracker_handoff": "not_verified; tracker implementation is absent in modules/tracking",
+                "continuous_30_minute_stability": "not_run",
+                "crash_count": null,
+                "frame_error_count": null,
+                "unexpected_empty_detection_count": null,
+                "soak_throttling_or_undervoltage": "not_measured"
+            },
+            "suggested_command": "python blind-navigation/2_edge_device/best_model_inference.py --source pi_deployment_package/assets/sample_rod.jpg --model yolov26n --backend onnx --precision int8"
+        },
+        {
+            "role": "performance_winner",
+            "model": "YOLO26n",
+            "runtime": "NCNN FP32",
+            "input_size": 320,
+            "manifest_key": "models.yolov26n.ncnn_fp32_320",
+            "artifact": "pi_deployment_package/weights/ncnn/yolov26n_ncnn_fp32/model.ncnn.param + model.ncnn.bin",
+            "sha256": {
+                "param": "95113dec2b64eb03a0c9d4db6842ed249eea44866073eb3c0754c6d198e6c7df",
+                "bin": "87c0e712e111a61933b04c617de225ee27ee07403ddd7d6cb731eaebe02d3af9"
+            },
+            "manifest_entry_present": true,
+            "manifest_accuracy_passed": true,
+            "manifest_or_artifact_load_test": "not_run",
+            "output_adapter": "raw predictions followed by CPU NMS in the inference template",
+            "prior_pi_benchmark": {
+                "source": "pi_deployment_package/benchmarks_pi/benchmark_main_320/yolov26n_ncnn_fp32_320_benchmark_results.json",
+                "schedule": {
+                    "warmup": 50,
+                    "runs_per_repeat": 1000,
+                    "repeats": 3,
+                    "threads": 4
+                },
+                "benchmark_status": "valid",
+                "timing_scope": "preprocess + inference + postprocess; image decode excluded",
+                "p50_ms": 84.289,
+                "p95_ms": 107.747,
+                "p99_ms": 168.306,
+                "fps_equivalent_from_p50": 11.864,
+                "fps_measured_end_to_end": null,
+                "peak_sampled_process_ram_mb": 119.14,
+                "system_cpu_mean_pct": 93.41,
+                "system_cpu_p95_pct": 94.3,
+                "temperature_start_c": 57.45,
+                "temperature_end_c": 57.94,
+                "throttling_or_undervoltage_at_sampled_boundaries": false
+            },
+            "integration_checks": {
+                "runtime_load_success": "not_run",
+                "output_schema_runtime_check": "not_run",
+                "nan_inf_runtime_check": "not_run",
+                "bbox_runtime_check": "not_run",
+                "tracker_handoff": "not_verified; tracker implementation is absent in modules/tracking",
+                "continuous_30_minute_stability": "not_run",
+                "crash_count": null,
+                "frame_error_count": null,
+                "unexpected_empty_detection_count": null,
+                "soak_throttling_or_undervoltage": "not_measured"
+            },
+            "suggested_command": "python blind-navigation/2_edge_device/best_model_inference.py --source pi_deployment_package/assets/sample_rod.jpg --model yolov26n --backend ncnn --precision fp32"
+        }
+    ],
+    "integration_guidance": {
+        "manifest_and_load": [
+            "Read the selected model entry from pi_deployment_package/weights/manifest.json.",
+            "Verify the recorded ONNX SHA-256, or both NCNN param/bin SHA-256 values, before loading.",
+            "Record manifest registration separately from successful target-device load."
+        ],
+        "output_validation": [
+            "Require exactly class_id, class_name, confidence, and bbox_xyxy fields.",
+            "Require integer class_id in [0, 24], class_name string matching the class map, and finite confidence in [0, 1].",
+            "Require four finite bbox coordinates in source-frame pixel space, with 0 <= x1 < x2 <= frame_width and 0 <= y1 < y2 <= frame_height.",
+            "Count invalid detections and frames; fail the integration check on any NaN/Inf or malformed/out-of-bounds box."
+        ],
+        "tracking": "No Python tracker implementation is present in blind-navigation/2_edge_device/modules/tracking in this checkout. Define the tracker input contract and verify handoff before marking tracking passed.",
+        "soak": "Run each model continuously for at least 30 minutes on a representative labeled stream. Count crashes, frame errors, and empty detections on frames expected to contain objects; sample temperature and vcgencmd get_throttled throughout the run.",
+        "empty_detection_interpretation": "An empty result is not inherently an error. Classify as anomalous only on labeled/known-positive frames or according to an agreed operational rule.",
+        "stable_criteria": "Mark stable only after the full 30-minute run completes with no crash, no unexplained frame errors, valid output and tracker handoff throughout, and acceptable thermal/power behavior."
+    },
+    "source_notes": {
+        "runtime_benchmark_metric": "FPS equivalent is 1000 / p50_ms; it is not measured end-to-end video FPS.",
+        "historical_throttle": "Existing benchmark artifacts show no throttle/undervoltage at their sampled start/end boundaries; this is not a continuous-soak result.",
+        "tracking_source_scan": "blind-navigation/2_edge_device/modules/tracking contains no Python implementation in the current workspace.",
+        "schema_mismatch_note": "The best-model inference template emits bbox_xyxy; legacy deployment_config.yaml documents bbox. Align this contract when integrating with the tracker."
+    }
+}

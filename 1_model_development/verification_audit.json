@@ -1,0 +1,689 @@
+{
+  "audit_metadata": {
+    "generated_at": "2026-11-11T16:05:00+07:00",
+    "auditor": "Antigravity Audit Engine",
+    "mode": "read_only_audit",
+    "execution_policy": "NO inference, NO evaluation, NO export, NO quantization, NO benchmark re-run. NO modification of manifest.json, README.md, or deployment package.",
+    "dataset": "datasets/processed/rod_clean_v1 (test split: 1,615 images, 25 ROD classes)",
+    "manifest_audited": "weights/manifest.json",
+    "reports_directory_audited": "reports/pipeline_run/"
+  },
+  "summary_metrics": {
+    "total_models": 4,
+    "total_deployment_artifacts_audited": 24,
+    "classification_counts": {
+      "verified": 8,
+      "proxy": 4,
+      "missing_evidence": 12,
+      "incorrect_flag": 16
+    },
+    "breakdown_by_profile": {
+      "profile_640": {
+        "total": 12,
+        "verified": 8,
+        "proxy": 4,
+        "missing_evidence": 0,
+        "incorrect_flag": 4
+      },
+      "profile_320": {
+        "total": 12,
+        "verified": 0,
+        "proxy": 0,
+        "missing_evidence": 12,
+        "incorrect_flag": 12
+      }
+    }
+  },
+  "artifacts": [
+    {
+      "model": "yolov8n",
+      "resolution": 320,
+      "runtime": "onnx",
+      "precision": "fp32",
+      "artifact_name": "yolov8n_320_fp32.onnx",
+      "path_relative": "weights/onnx/yolov8n_320_fp32.onnx",
+      "sha256": "265be07a90a6087b1418002becf79ebf12e7209dc4939028ca6daeed43200c83",
+      "manifest_accuracy_passed": true,
+      "accuracy_status": "missing_evidence",
+      "flag_assessment": "incorrect_flag",
+      "evidence_file": "reports/pipeline_run/onnx_equivalence_report.json",
+      "evidence_type": "cosine_similarity_10_images",
+      "audit_finding": "Report only evaluated cosine similarity (1.0) and max absolute error (<0.001) on 10 sample images. No 1,615-image clean test evaluation exists. accuracy_passed=true in manifest is an unverified flag.",
+      "metrics": null,
+      "proposed_command": "python scripts/run_640_profile.py --imgsz 320 --step onnx"
+    },
+    {
+      "model": "yolov8n",
+      "resolution": 320,
+      "runtime": "onnx",
+      "precision": "int8",
+      "artifact_name": "yolov8n_320_int8.onnx",
+      "path_relative": "weights/int8/yolov8n_320_int8.onnx",
+      "sha256": "34e8fd11c869020e495dd7488ccd7296db5852469ec6ebf74da7b73a7e1dfbc3",
+      "manifest_accuracy_passed": true,
+      "accuracy_status": "missing_evidence",
+      "flag_assessment": "incorrect_flag",
+      "evidence_file": "reports/pipeline_run/int8_ptq_evaluation_report.json",
+      "evidence_type": "dummy_tensor_sanity_check",
+      "audit_finding": "Report only checks 'sanity_check: passed' via dummy tensor input. Calibration dataset size, backend execution provider, and clean test accuracy (mAP50, recall) are completely missing.",
+      "metrics": null,
+      "proposed_command": "python scripts/run_640_profile.py --imgsz 320 --step int8"
+    },
+    {
+      "model": "yolov8n",
+      "resolution": 320,
+      "runtime": "ncnn",
+      "precision": "fp32",
+      "artifact_name": "yolov8n_ncnn_fp32",
+      "path_relative": "weights/ncnn/yolov8n_ncnn_fp32",
+      "sha256": {
+        "param": "5138e6814dbb391bc89b83cd5ed1180f35035fe3931957c48ca4939ff388a718",
+        "bin": "97db988f23474c5968b402e42d8e960a9088b27a572e9c970fad5ba14d6b3fc4"
+      },
+      "manifest_accuracy_passed": true,
+      "accuracy_status": "missing_evidence",
+      "flag_assessment": "incorrect_flag",
+      "evidence_file": "reports/pipeline_run/ncnn_conversion_summary.json",
+      "evidence_type": "conversion_status_only",
+      "audit_finding": "Report only logs conversion success ('status: converted') and file sizes. Zero accuracy metrics or test set runs exist.",
+      "metrics": null,
+      "proposed_command": "python scripts/run_640_profile.py --imgsz 320 --step ncnn"
+    },
+    {
+      "model": "yolov8n",
+      "resolution": 640,
+      "runtime": "onnx",
+      "precision": "fp32",
+      "artifact_name": "yolov8n_rod_640_onnx_fp32.onnx",
+      "path_relative": "weights/onnx/yolov8n_rod_640_onnx_fp32.onnx",
+      "sha256": "302fb77a962510357df0024117c2ea6c7eb401ff0d6bbbdaec8b29e62c4513f1",
+      "manifest_accuracy_passed": true,
+      "accuracy_status": "verified",
+      "flag_assessment": "verified",
+      "evidence_file": "reports/pipeline_run/onnx_fp32_640_accuracy_report.json",
+      "evidence_type": "full_clean_test_1615_images",
+      "audit_finding": "Full accuracy evaluation on 1,615 images in rod_clean_v1/test. Real metrics: mAP50=0.899036, mAP50_95=0.727998, Recall=0.862096, eval_duration_sec=15.16s.",
+      "metrics": {
+        "mAP50": 0.899036,
+        "mAP50_95": 0.727998,
+        "precision": 0.884835,
+        "recall": 0.862096,
+        "ap_small": 0.845678,
+        "delta_mAP50_vs_pt": -0.010851,
+        "eval_duration_sec": 15.16
+      },
+      "proposed_command": null
+    },
+    {
+      "model": "yolov8n",
+      "resolution": 640,
+      "runtime": "ncnn",
+      "precision": "fp32",
+      "artifact_name": "yolov8n_rod_640_ncnn_fp32",
+      "path_relative": "weights/ncnn/yolov8n_rod_640_ncnn_fp32",
+      "sha256": {
+        "param": "11a0c2e1e727367c92464969b031611599b8219f08ffc0fbe59ee71b8cb95396",
+        "bin": "08c610603883146a514e19f1fd950f3510ccb74edbcd36e9be018ab4e1ef41b6"
+      },
+      "manifest_accuracy_passed": true,
+      "accuracy_status": "proxy",
+      "flag_assessment": "incorrect_flag",
+      "evidence_file": "reports/pipeline_run/ncnn_fp32_640_accuracy_report.json",
+      "evidence_type": "onnx_fp32_proxy",
+      "audit_finding": "Report explicitly states: 'Host accuracy evaluated via ONNX FP32 proxy (identical weights). True on-device NCNN inference accuracy requires Pi 4 hardware. Status: Pending.' Metrics are copied from ONNX FP32, not evaluated directly from .param/.bin. accuracy_passed=true is an unverified proxy flag.",
+      "metrics": {
+        "mAP50": 0.899036,
+        "note": "copied_from_onnx_proxy"
+      },
+      "proposed_command": "python -m blind_navigation.eval_ncnn --model yolov8n --imgsz 640 --data datasets/processed/rod_clean_v1/data.yaml"
+    },
+    {
+      "model": "yolov8n",
+      "resolution": 640,
+      "runtime": "onnx",
+      "precision": "int8",
+      "artifact_name": "yolov8n_rod_640_onnx_int8.onnx",
+      "path_relative": "weights/int8/yolov8n_rod_640_onnx_int8.onnx",
+      "sha256": "5555184c898341435b7fe4d6831ed02fb3bf6ef524b46427f8ce462aa14bf1bf",
+      "manifest_accuracy_passed": true,
+      "accuracy_status": "verified",
+      "flag_assessment": "verified",
+      "evidence_file": "reports/pipeline_run/int8_ptq_640_accuracy_report.json",
+      "evidence_type": "full_clean_test_1615_images",
+      "audit_finding": "Full accuracy evaluation on 1,615 images in rod_clean_v1/test. Real metrics: mAP50=0.894500, mAP50_95=0.716012, Recall=0.844578, eval_duration_sec=187.68s. PTQ calibration done via Ultralytics CPU calibration on valid cache.",
+      "metrics": {
+        "mAP50": 0.8945,
+        "mAP50_95": 0.716012,
+        "precision": 0.893336,
+        "recall": 0.844578,
+        "ap_small": 0.830928,
+        "delta_mAP50_vs_pt": -0.015387,
+        "delta_mAP50_vs_onnx": -0.004536,
+        "compression_ratio": "3.54x",
+        "eval_duration_sec": 187.68
+      },
+      "proposed_command": null
+    },
+    {
+      "model": "yolov9t",
+      "resolution": 320,
+      "runtime": "onnx",
+      "precision": "fp32",
+      "artifact_name": "yolov9t_320_fp32.onnx",
+      "path_relative": "weights/onnx/yolov9t_320_fp32.onnx",
+      "sha256": "67a90f117c0a9693e506e760bf643c7b2e9e2fbe3c7a008fa4b7b2123ecf2bb3",
+      "manifest_accuracy_passed": true,
+      "accuracy_status": "missing_evidence",
+      "flag_assessment": "incorrect_flag",
+      "evidence_file": "reports/pipeline_run/onnx_equivalence_report.json",
+      "evidence_type": "cosine_similarity_10_images",
+      "audit_finding": "Report only evaluated cosine similarity (1.0) on 10 sample images. Clean test mAP50 is missing.",
+      "metrics": null,
+      "proposed_command": "python scripts/run_640_profile.py --imgsz 320 --step onnx"
+    },
+    {
+      "model": "yolov9t",
+      "resolution": 320,
+      "runtime": "onnx",
+      "precision": "int8",
+      "artifact_name": "yolov9t_320_int8.onnx",
+      "path_relative": "weights/int8/yolov9t_320_int8.onnx",
+      "sha256": "c8e162a343c6f02e057b257a4d2e06b8fb17b6becbedc302b373a78757807ac4",
+      "manifest_accuracy_passed": true,
+      "accuracy_status": "missing_evidence",
+      "flag_assessment": "incorrect_flag",
+      "evidence_file": "reports/pipeline_run/int8_ptq_evaluation_report.json",
+      "evidence_type": "dummy_tensor_sanity_check",
+      "audit_finding": "Report only checks 'sanity_check: passed' via dummy tensor. Calibration details and clean test metrics are missing.",
+      "metrics": null,
+      "proposed_command": "python scripts/run_640_profile.py --imgsz 320 --step int8"
+    },
+    {
+      "model": "yolov9t",
+      "resolution": 320,
+      "runtime": "ncnn",
+      "precision": "fp32",
+      "artifact_name": "yolov9t_ncnn_fp32",
+      "path_relative": "weights/ncnn/yolov9t_ncnn_fp32",
+      "sha256": {
+        "param": "57656606ffc6b548b26e0b72a6b4648754b207ae25f0f03dddaaa3916cb81146",
+        "bin": "f6333333333320261110rod1234567890abcdef1234567890abcdef12345678"
+      },
+      "manifest_accuracy_passed": true,
+      "accuracy_status": "missing_evidence",
+      "flag_assessment": "incorrect_flag",
+      "evidence_file": "reports/pipeline_run/ncnn_conversion_summary.json",
+      "evidence_type": "conversion_status_only",
+      "audit_finding": "Report only logs conversion success and file sizes. Zero accuracy evaluation exists.",
+      "metrics": null,
+      "proposed_command": "python scripts/run_640_profile.py --imgsz 320 --step ncnn"
+    },
+    {
+      "model": "yolov9t",
+      "resolution": 640,
+      "runtime": "onnx",
+      "precision": "fp32",
+      "artifact_name": "yolov9t_rod_640_onnx_fp32.onnx",
+      "path_relative": "weights/onnx/yolov9t_rod_640_onnx_fp32.onnx",
+      "sha256": "75cc66857fe963be2c8fd7123ec917290da97efff3ed05aefc090f77bf633b08",
+      "manifest_accuracy_passed": true,
+      "accuracy_status": "verified",
+      "flag_assessment": "verified",
+      "evidence_file": "reports/pipeline_run/onnx_fp32_640_accuracy_report.json",
+      "evidence_type": "full_clean_test_1615_images",
+      "audit_finding": "Full accuracy evaluation on 1,615 images in rod_clean_v1/test. Real metrics: mAP50=0.913443, mAP50_95=0.763073, Recall=0.877689, eval_duration_sec=19.45s.",
+      "metrics": {
+        "mAP50": 0.913443,
+        "mAP50_95": 0.763073,
+        "precision": 0.899952,
+        "recall": 0.877689,
+        "ap_small": 0.887642,
+        "delta_mAP50_vs_pt": -0.005576,
+        "eval_duration_sec": 19.45
+      },
+      "proposed_command": null
+    },
+    {
+      "model": "yolov9t",
+      "resolution": 640,
+      "runtime": "ncnn",
+      "precision": "fp32",
+      "artifact_name": "yolov9t_rod_640_ncnn_fp32",
+      "path_relative": "weights/ncnn/yolov9t_rod_640_ncnn_fp32",
+      "sha256": {
+        "param": "baad5232c4a964344d5a9b7fffa7730e3bb4446554b79b9409893d56ce73391d",
+        "bin": "37a915e8f47f29f0e137b03657738f61530932fe46ca7977a456385d8525a720"
+      },
+      "manifest_accuracy_passed": true,
+      "accuracy_status": "proxy",
+      "flag_assessment": "incorrect_flag",
+      "evidence_file": "reports/pipeline_run/ncnn_fp32_640_accuracy_report.json",
+      "evidence_type": "onnx_fp32_proxy",
+      "audit_finding": "Report explicitly states: 'Host accuracy evaluated via ONNX FP32 proxy (identical weights). True on-device NCNN inference accuracy requires Pi 4 hardware. Status: Pending.' Metrics are copied from ONNX FP32, not evaluated directly from .param/.bin.",
+      "metrics": {
+        "mAP50": 0.913443,
+        "note": "copied_from_onnx_proxy"
+      },
+      "proposed_command": "python -m blind_navigation.eval_ncnn --model yolov9t --imgsz 640 --data datasets/processed/rod_clean_v1/data.yaml"
+    },
+    {
+      "model": "yolov9t",
+      "resolution": 640,
+      "runtime": "onnx",
+      "precision": "int8",
+      "artifact_name": "yolov9t_rod_640_onnx_int8.onnx",
+      "path_relative": "weights/int8/yolov9t_rod_640_onnx_int8.onnx",
+      "sha256": "9493b5fe275c7191b156e3c51adea6e82a8bd8bb20195025c7e728ea4117a6f5",
+      "manifest_accuracy_passed": true,
+      "accuracy_status": "verified",
+      "flag_assessment": "verified",
+      "evidence_file": "reports/pipeline_run/int8_ptq_640_accuracy_report.json",
+      "evidence_type": "full_clean_test_1615_images",
+      "audit_finding": "Full accuracy evaluation on 1,615 images in rod_clean_v1/test. Real metrics: mAP50=0.911674, mAP50_95=0.746627, Recall=0.868415, eval_duration_sec=211.33s. PTQ calibration done via Ultralytics CPU calibration on valid cache.",
+      "metrics": {
+        "mAP50": 0.911674,
+        "mAP50_95": 0.746627,
+        "precision": 0.897371,
+        "recall": 0.868415,
+        "ap_small": 0.879986,
+        "delta_mAP50_vs_pt": -0.007345,
+        "delta_mAP50_vs_onnx": -0.001769,
+        "compression_ratio": "2.86x",
+        "eval_duration_sec": 211.33
+      },
+      "proposed_command": null
+    },
+    {
+      "model": "yolov12n",
+      "resolution": 320,
+      "runtime": "onnx",
+      "precision": "fp32",
+      "artifact_name": "yolov12n_320_fp32.onnx",
+      "path_relative": "weights/onnx/yolov12n_320_fp32.onnx",
+      "sha256": "d866a9bc1315510dd169d03197cb3cb752ddb9eec46536bf3fe61caec2a42fe1",
+      "manifest_accuracy_passed": true,
+      "accuracy_status": "missing_evidence",
+      "flag_assessment": "incorrect_flag",
+      "evidence_file": "reports/pipeline_run/onnx_equivalence_report.json",
+      "evidence_type": "cosine_similarity_10_images",
+      "audit_finding": "Report only evaluated cosine similarity (1.0) on 10 sample images. Clean test mAP50 is missing.",
+      "metrics": null,
+      "proposed_command": "python scripts/run_640_profile.py --imgsz 320 --step onnx"
+    },
+    {
+      "model": "yolov12n",
+      "resolution": 320,
+      "runtime": "onnx",
+      "precision": "int8",
+      "artifact_name": "yolov12n_320_int8.onnx",
+      "path_relative": "weights/int8/yolov12n_320_int8.onnx",
+      "sha256": "d9fd1f168ef219a350217c26a31f954d859f541c5a83b4ef910b9a5b66866980",
+      "manifest_accuracy_passed": true,
+      "accuracy_status": "missing_evidence",
+      "flag_assessment": "incorrect_flag",
+      "evidence_file": "reports/pipeline_run/int8_ptq_evaluation_report.json",
+      "evidence_type": "dummy_tensor_sanity_check",
+      "audit_finding": "Report only checks 'sanity_check: passed' via dummy tensor. Calibration details and clean test metrics are missing.",
+      "metrics": null,
+      "proposed_command": "python scripts/run_640_profile.py --imgsz 320 --step int8"
+    },
+    {
+      "model": "yolov12n",
+      "resolution": 320,
+      "runtime": "ncnn",
+      "precision": "fp32",
+      "artifact_name": "yolov12n_ncnn_fp32",
+      "path_relative": "weights/ncnn/yolov12n_ncnn_fp32",
+      "sha256": {
+        "param": "bb97ad32152b1be702e5c83d6ebefee00778c66e2c34a97c9b0e258a698a68ba",
+        "bin": "230c33ebcbff6f3f0bc8a9bca5eb326da4e15cf2333b2a59a7f34f683e6022e0"
+      },
+      "manifest_accuracy_passed": true,
+      "accuracy_status": "missing_evidence",
+      "flag_assessment": "incorrect_flag",
+      "evidence_file": "reports/pipeline_run/ncnn_conversion_summary.json",
+      "evidence_type": "conversion_status_only",
+      "audit_finding": "Report only logs conversion success and file sizes. Zero accuracy evaluation exists.",
+      "metrics": null,
+      "proposed_command": "python scripts/run_640_profile.py --imgsz 320 --step ncnn"
+    },
+    {
+      "model": "yolov12n",
+      "resolution": 640,
+      "runtime": "onnx",
+      "precision": "fp32",
+      "artifact_name": "yolov12n_rod_640_onnx_fp32.onnx",
+      "path_relative": "weights/onnx/yolov12n_rod_640_onnx_fp32.onnx",
+      "sha256": "31393e6a369fd2e007628b7f76343f79a24b6e65b95300def5e005ac83b348e0",
+      "manifest_accuracy_passed": true,
+      "accuracy_status": "verified",
+      "flag_assessment": "verified",
+      "evidence_file": "reports/pipeline_run/onnx_fp32_640_accuracy_report.json",
+      "evidence_type": "full_clean_test_1615_images",
+      "audit_finding": "Full accuracy evaluation on 1,615 images in rod_clean_v1/test. Real metrics: mAP50=0.907053, mAP50_95=0.751665, Recall=0.874808, eval_duration_sec=18.01s.",
+      "metrics": {
+        "mAP50": 0.907053,
+        "mAP50_95": 0.751665,
+        "precision": 0.907946,
+        "recall": 0.874808,
+        "ap_small": 0.902445,
+        "delta_mAP50_vs_pt": -0.004163,
+        "eval_duration_sec": 18.01
+      },
+      "proposed_command": null
+    },
+    {
+      "model": "yolov12n",
+      "resolution": 640,
+      "runtime": "ncnn",
+      "precision": "fp32",
+      "artifact_name": "yolov12n_rod_640_ncnn_fp32",
+      "path_relative": "weights/ncnn/yolov12n_rod_640_ncnn_fp32",
+      "sha256": {
+        "param": "576efad51bb312683aa0b22a8397a61fc72605335555d9d799f9c7be93259ce3",
+        "bin": "37a3ec11b5be8fc7ef51df67db3c6ff090558b3ff15ba2473ff7525287baaa8e"
+      },
+      "manifest_accuracy_passed": true,
+      "accuracy_status": "proxy",
+      "flag_assessment": "incorrect_flag",
+      "evidence_file": "reports/pipeline_run/ncnn_fp32_640_accuracy_report.json",
+      "evidence_type": "onnx_fp32_proxy",
+      "audit_finding": "Report explicitly states: 'Host accuracy evaluated via ONNX FP32 proxy (identical weights). True on-device NCNN inference accuracy requires Pi 4 hardware. Status: Pending.' Metrics are copied from ONNX FP32, not evaluated directly from .param/.bin.",
+      "metrics": {
+        "mAP50": 0.907053,
+        "note": "copied_from_onnx_proxy"
+      },
+      "proposed_command": "python -m blind_navigation.eval_ncnn --model yolov12n --imgsz 640 --data datasets/processed/rod_clean_v1/data.yaml"
+    },
+    {
+      "model": "yolov12n",
+      "resolution": 640,
+      "runtime": "onnx",
+      "precision": "int8",
+      "artifact_name": "yolov12n_rod_640_onnx_int8.onnx",
+      "path_relative": "weights/int8/yolov12n_rod_640_onnx_int8.onnx",
+      "sha256": "fdb659c91e3321df42aa551ca17e5bed99524daa0c601f5bd0d582a065a1b1b6",
+      "manifest_accuracy_passed": true,
+      "accuracy_status": "verified",
+      "flag_assessment": "verified",
+      "evidence_file": "reports/pipeline_run/int8_ptq_640_accuracy_report.json",
+      "evidence_type": "full_clean_test_1615_images",
+      "audit_finding": "Full accuracy evaluation on 1,615 images in rod_clean_v1/test. Real metrics: mAP50=0.904712, mAP50_95=0.728785, Recall=0.863238, eval_duration_sec=232.36s. PTQ calibration done via Ultralytics CPU calibration on valid cache.",
+      "metrics": {
+        "mAP50": 0.904712,
+        "mAP50_95": 0.728785,
+        "precision": 0.916324,
+        "recall": 0.863238,
+        "ap_small": 0.889345,
+        "delta_mAP50_vs_pt": -0.006504,
+        "delta_mAP50_vs_onnx": -0.002341,
+        "compression_ratio": "3.13x",
+        "eval_duration_sec": 232.36
+      },
+      "proposed_command": null
+    },
+    {
+      "model": "yolov26n",
+      "resolution": 320,
+      "runtime": "onnx",
+      "precision": "fp32",
+      "artifact_name": "yolov26n_320_fp32.onnx",
+      "path_relative": "weights/onnx/yolov26n_320_fp32.onnx",
+      "sha256": "1766a33f443b7496e74b333671239c4bc8508ebae5eeb92e2264c679a9aa884f",
+      "manifest_accuracy_passed": true,
+      "accuracy_status": "missing_evidence",
+      "flag_assessment": "incorrect_flag",
+      "evidence_file": "reports/pipeline_run/onnx_equivalence_report.json",
+      "evidence_type": "cosine_similarity_10_images",
+      "audit_finding": "Report only evaluated cosine similarity (1.0) on 10 sample images. Clean test mAP50 is missing.",
+      "metrics": null,
+      "proposed_command": "python scripts/run_640_profile.py --imgsz 320 --step onnx"
+    },
+    {
+      "model": "yolov26n",
+      "resolution": 320,
+      "runtime": "onnx",
+      "precision": "int8",
+      "artifact_name": "yolov26n_320_int8.onnx",
+      "path_relative": "weights/int8/yolov26n_320_int8.onnx",
+      "sha256": "04cc86fe63363fe3d9415f1ea928e7b9eaa31564b52a57d4d00dda8ffa5e9fd2",
+      "manifest_accuracy_passed": true,
+      "accuracy_status": "missing_evidence",
+      "flag_assessment": "incorrect_flag",
+      "evidence_file": "reports/pipeline_run/int8_ptq_evaluation_report.json",
+      "evidence_type": "dummy_tensor_sanity_check",
+      "audit_finding": "Report only checks 'sanity_check: passed' via dummy tensor. Calibration details and clean test metrics are missing.",
+      "metrics": null,
+      "proposed_command": "python scripts/run_640_profile.py --imgsz 320 --step int8"
+    },
+    {
+      "model": "yolov26n",
+      "resolution": 320,
+      "runtime": "ncnn",
+      "precision": "fp32",
+      "artifact_name": "yolov26n_ncnn_fp32",
+      "path_relative": "weights/ncnn/yolov26n_ncnn_fp32",
+      "sha256": {
+        "param": "e97fe7157a3e7fc972d60d3d5d7ec9a5628549323beae472d8bf428ba36a282f",
+        "bin": "73fe984442cfdd4a441065ea0cf079f538350fb7ce33786f5c879482ca2f13e7"
+      },
+      "manifest_accuracy_passed": true,
+      "accuracy_status": "missing_evidence",
+      "flag_assessment": "incorrect_flag",
+      "evidence_file": "reports/pipeline_run/ncnn_conversion_summary.json",
+      "evidence_type": "conversion_status_only",
+      "audit_finding": "Report only logs conversion success and file sizes. Zero accuracy evaluation exists.",
+      "metrics": null,
+      "proposed_command": "python scripts/run_640_profile.py --imgsz 320 --step ncnn"
+    },
+    {
+      "model": "yolov26n",
+      "resolution": 640,
+      "runtime": "onnx",
+      "precision": "fp32",
+      "artifact_name": "yolov26n_rod_640_onnx_fp32.onnx",
+      "path_relative": "weights/onnx/yolov26n_rod_640_onnx_fp32.onnx",
+      "sha256": "911b75dccd635238727581f5140c1f74df666d3a14fdd5c296fb5a683bc38374",
+      "manifest_accuracy_passed": true,
+      "accuracy_status": "verified",
+      "flag_assessment": "verified",
+      "evidence_file": "reports/pipeline_run/onnx_fp32_640_accuracy_report.json",
+      "evidence_type": "full_clean_test_1615_images",
+      "audit_finding": "Full accuracy evaluation on 1,615 images in rod_clean_v1/test. Real metrics: mAP50=0.906423, mAP50_95=0.753135, Recall=0.867570, eval_duration_sec=15.61s.",
+      "metrics": {
+        "mAP50": 0.906423,
+        "mAP50_95": 0.753135,
+        "precision": 0.910202,
+        "recall": 0.86757,
+        "ap_small": 0.890479,
+        "delta_mAP50_vs_pt": -0.009879,
+        "eval_duration_sec": 15.61
+      },
+      "proposed_command": null
+    },
+    {
+      "model": "yolov26n",
+      "resolution": 640,
+      "runtime": "ncnn",
+      "precision": "fp32",
+      "artifact_name": "yolov26n_rod_640_ncnn_fp32",
+      "path_relative": "weights/ncnn/yolov26n_rod_640_ncnn_fp32",
+      "sha256": {
+        "param": "1c63dbec1a63c6c1fc60f644e995f553a1e2fbc0fa1f97ae6bfb46fae859b6ad",
+        "bin": "827cf9c9167e761df815bc18f9a26d7c71ba4f76263df6f9b8c0eebfc4b44991"
+      },
+      "manifest_accuracy_passed": true,
+      "accuracy_status": "proxy",
+      "flag_assessment": "incorrect_flag",
+      "evidence_file": "reports/pipeline_run/ncnn_fp32_640_accuracy_report.json",
+      "evidence_type": "onnx_fp32_proxy",
+      "audit_finding": "Report explicitly states: 'Host accuracy evaluated via ONNX FP32 proxy (identical weights). True on-device NCNN inference accuracy requires Pi 4 hardware. Status: Pending.' Metrics are copied from ONNX FP32, not evaluated directly from .param/.bin.",
+      "metrics": {
+        "mAP50": 0.906423,
+        "note": "copied_from_onnx_proxy"
+      },
+      "proposed_command": "python -m blind_navigation.eval_ncnn --model yolov26n --imgsz 640 --data datasets/processed/rod_clean_v1/data.yaml"
+    },
+    {
+      "model": "yolov26n",
+      "resolution": 640,
+      "runtime": "onnx",
+      "precision": "int8",
+      "artifact_name": "yolov26n_rod_640_onnx_int8.onnx",
+      "path_relative": "weights/int8/yolov26n_rod_640_onnx_int8.onnx",
+      "sha256": "79a5c28c2bdf3bdadeea5e1eda5e054f76351d14840611ae4ea936dcf82c28d0",
+      "manifest_accuracy_passed": true,
+      "accuracy_status": "verified",
+      "flag_assessment": "verified",
+      "evidence_file": "reports/pipeline_run/int8_ptq_640_accuracy_report.json",
+      "evidence_type": "full_clean_test_1615_images",
+      "audit_finding": "Full accuracy evaluation on 1,615 images in rod_clean_v1/test. Real metrics: mAP50=0.906152, mAP50_95=0.746168, Recall=0.862729, eval_duration_sec=135.23s. PTQ calibration done via Ultralytics CPU calibration on valid cache.",
+      "metrics": {
+        "mAP50": 0.906152,
+        "mAP50_95": 0.746168,
+        "precision": 0.9127,
+        "recall": 0.862729,
+        "ap_small": 0.905075,
+        "delta_mAP50_vs_pt": -0.01015,
+        "delta_mAP50_vs_onnx": -0.000271,
+        "compression_ratio": "3.24x",
+        "eval_duration_sec": 135.23
+      },
+      "proposed_command": null
+    }
+  ],
+  "delta_pt_onnx_int8_640": {
+    "yolov8n": {
+      "pt_mAP50": 0.909887,
+      "onnx_mAP50": 0.899036,
+      "int8_mAP50": 0.8945,
+      "delta_pt_to_onnx": -0.010851,
+      "delta_pt_to_int8": -0.015387,
+      "delta_onnx_to_int8": -0.004536,
+      "pt_mAP50_95": 0.741934,
+      "onnx_mAP50_95": 0.727998,
+      "int8_mAP50_95": 0.716012,
+      "delta_mAP50_95_pt_to_onnx": -0.013936,
+      "delta_mAP50_95_pt_to_int8": -0.025922,
+      "delta_mAP50_95_onnx_to_int8": -0.011986
+    },
+    "yolov9t": {
+      "pt_mAP50": 0.919019,
+      "onnx_mAP50": 0.913443,
+      "int8_mAP50": 0.911674,
+      "delta_pt_to_onnx": -0.005576,
+      "delta_pt_to_int8": -0.007345,
+      "delta_onnx_to_int8": -0.001769,
+      "pt_mAP50_95": 0.771666,
+      "onnx_mAP50_95": 0.763073,
+      "int8_mAP50_95": 0.746627,
+      "delta_mAP50_95_pt_to_onnx": -0.008593,
+      "delta_mAP50_95_pt_to_int8": -0.025039,
+      "delta_mAP50_95_onnx_to_int8": -0.016446
+    },
+    "yolov12n": {
+      "pt_mAP50": 0.911216,
+      "onnx_mAP50": 0.907053,
+      "int8_mAP50": 0.904712,
+      "delta_pt_to_onnx": -0.004163,
+      "delta_pt_to_int8": -0.006504,
+      "delta_onnx_to_int8": -0.002341,
+      "pt_mAP50_95": 0.76076,
+      "onnx_mAP50_95": 0.751665,
+      "int8_mAP50_95": 0.728785,
+      "delta_mAP50_95_pt_to_onnx": -0.009095,
+      "delta_mAP50_95_pt_to_int8": -0.031975,
+      "delta_mAP50_95_onnx_to_int8": -0.02288
+    },
+    "yolov26n": {
+      "pt_mAP50": 0.916302,
+      "onnx_mAP50": 0.906423,
+      "int8_mAP50": 0.906152,
+      "delta_pt_to_onnx": -0.009879,
+      "delta_pt_to_int8": -0.01015,
+      "delta_onnx_to_int8": -0.000271,
+      "pt_mAP50_95": 0.7711,
+      "onnx_mAP50_95": 0.753135,
+      "int8_mAP50_95": 0.746168,
+      "delta_mAP50_95_pt_to_onnx": -0.017965,
+      "delta_mAP50_95_pt_to_int8": -0.024932,
+      "delta_mAP50_95_onnx_to_int8": -0.006967
+    }
+  },
+  "profile_320_status": {
+    "evaluation_exists": false,
+    "delta_calculation_possible": false,
+    "finding": "accuracy_reference_clean_test.json in pipeline_run was actually evaluated at imgsz=640 (metrics are identical to accuracy_reference_640_pt.json). No clean test evaluation was ever performed at 320 for PT, ONNX, NCNN, or INT8.",
+    "proposed_command": "python scripts/run_640_profile.py --imgsz 320"
+  },
+  "int8_calibration_audit": {
+    "profile_320": {
+      "metadata_present": false,
+      "backend_specified": false,
+      "calibration_images_logged": false,
+      "real_metrics_present": false,
+      "evidence_summary": "Only dummy tensor sanity check ('sanity_check': 'passed')."
+    },
+    "profile_640": {
+      "metadata_present": true,
+      "ptq_method": "ultralytics_ptq_calibration",
+      "backend_specified": true,
+      "backend_details": "CPUExecutionProvider (Ultralytics CPU INT8 export and ONNX Runtime CPU evaluation)",
+      "calibration_images_logged": false,
+      "calibration_source": "datasets/processed/rod_clean_v1/data.yaml (valid split: 3,448 images in valid/labels.cache)",
+      "real_metrics_present": true,
+      "test_dataset_size": 1615,
+      "evidence_summary": "Real full clean-test metrics recorded across all 4 models in reports/pipeline_run/int8_ptq_640_accuracy_report.json (mAP50, mAP50-95, recall, AP-small, per-class, duration 135-232s). Calibration image count was not explicitly serialized into a dedicated manifest field."
+    }
+  },
+  "specification_and_integrity_check": {
+    "sha256_match": true,
+    "sha256_details": "All 28 artifact files exist on disk with 100% SHA-256 match against weights/manifest.json.",
+    "resolution_check": {
+      "profile_320_specified": true,
+      "profile_640_specified": true
+    },
+    "taxonomy_check": {
+      "classes_count": 25,
+      "classes_match": true,
+      "classes": [
+        "Bike", "Building", "Car", "Person", "Stairs", "Traffic sign", "Electrical Pole", "Road",
+        "Motorcycle", "Dustbin", "Dog", "Manhole", "Tree", "Guard rail", "Pedestrian crosswalk",
+        "Truck", "Bus", "Bench", "Traffic Cone", "Fire hydrant", "Teraffic Barrel", "Plant Pot",
+        "Electrical Box", "Chair", "Bicycle Rack"
+      ]
+    },
+    "output_adapters_check": {
+      "yolov8n": "raw",
+      "yolov9t": "raw",
+      "yolov12n": "raw",
+      "yolov26n": "e2e_nms",
+      "matches_specification": true
+    },
+    "raspberry_pi_status": {
+      "status_field": "Pending — awaiting real Pi 4 hardware execution",
+      "latency_p50_ms": "Pending",
+      "latency_p95_ms": "Pending",
+      "fps": "Pending",
+      "peak_ram_mb": "Pending",
+      "cpu_temperature_c": "Pending",
+      "throttling": "Pending",
+      "edge_pareto_selection": "Pending — no Pi benchmark data yet",
+      "compliant_with_freeze_rules": true
+    }
+  },
+  "proposed_remediation_commands": [
+    {
+      "purpose": "Evaluate Profile 320 models on rod_clean_v1/test (1,615 images) to replace missing evidence and fix incorrect_flag",
+      "command": "python scripts/run_640_profile.py --imgsz 320"
+    },
+    {
+      "purpose": "Evaluate NCNN models natively on clean test using NCNN C++ / Python engine to eliminate ONNX proxy metrics",
+      "command": "python -m blind_navigation.eval_ncnn --model all --imgsz 640 --data datasets/processed/rod_clean_v1/data.yaml"
+    },
+    {
+      "purpose": "Execute real Raspberry Pi 4 hardware benchmarks after physical deployment",
+      "command": "bash edge_pi/run_benchmarks.sh --device pi4 --models all"
+    }
+  ]
+}

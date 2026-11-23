@@ -1,0 +1,58 @@
+{
+  "phase": "Phase A",
+  "version": "v1.0",
+  "frozen_at": "2026-11-07T15:48:13.335252Z",
+  "git_commit": "9cbc9ee57003d11f71c02f2909b2382dcebc138a",
+  "environment": {
+    "platform": "Linux-6.8.0-138-generic-x86_64-with-glibc2.35",
+    "python": "3.10.12",
+    "machine": "x86_64"
+  },
+  "dataset": {
+    "name": "ROD-Dataset",
+    "manifest_sha256": "9040b680cbc86981392b92c97a49e39f183de9fccee040afe292279e47a7e636",
+    "is_placeholder": true,
+    "note": "synthetic 11-image placeholder; real ROD not downloaded",
+    "num_classes": 25,
+    "shared_coco_classes": 11,
+    "domain_only_classes": 14
+  },
+  "models": {
+    "yolov8n": {
+      "pytorch_sha256": "f59b3d833e2ff32e194b5bb8e08d211dc7c5bdf144b90d2c8412c47ccfc83b36",
+      "onnx_sha256": "b23211ee9efaa3d650054de2f9706482b56ea36c4c3bf914f85c904d68f50b0f"
+    },
+    "yolo11n": {
+      "pytorch_sha256": "0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1",
+      "onnx_sha256": "f2e265d0d0ccd1f64c86b3d77e0ae85517268020a7aa4a8e4881ceeb841236e3"
+    },
+    "yolo12n": {
+      "pytorch_sha256": "419ff3dca37d69bacc93a50fa0c186a1c6f9fe62fae0f108b0872829689e9ca6",
+      "onnx_sha256": "b9fe632d27ac7f15bae020a2e4cde2088dceab8e154c74e64eae337511857cbd"
+    },
+    "yolo26n": {
+      "pytorch_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+      "onnx_sha256": "ce0da533184b3df3ebcd2c527f7dd3225f0dba0d9664f3788d1a86f0be33d3ef"
+    }
+  },
+  "configs": {
+    "configs/models.yaml": "8849e64e865e4cde32c2b44411e67937760c04d64dcd8207faf863ad0b050b16",
+    "configs/export.yaml": "fcf954127fa4a8a0f64bcdcd27afcb392fe55fbdc0e833fa4ae60ca800dc58d8",
+    "configs/benchmark.yaml": "82b39e6d725ec2b0142555e44d0f03cb84bb5e9d8022d85c65f54a16d6004318",
+    "configs/danger_classes.yaml": "75b3fcc26da55bce1066c95e67ab7692baca5d7b76a6e8511ae8b65ef1b7824b",
+    "configs/datasets/rod.yaml": "fc12d62abfb347014d53a99e2b3827a939743270e1b5d0d410442bcba7177bbc",
+    "configs/datasets/rod_to_coco.yaml": "e2e0aa71de4856a36a1b5193a191d2c4911c6a78bc82d90faefac8ec1e098629"
+  },
+  "validation_status": {
+    "dataset_validation": "passed_on_placeholder",
+    "taxonomy_validation": "passed",
+    "onnx_export": "passed",
+    "onnx_graph_check": "passed",
+    "pytorch_onnx_equivalence": "not_run",
+    "determinism": "not_run",
+    "host_benchmarks": "completed",
+    "pi_harness_packaged": true,
+    "pi_hardware_run": "pending",
+    "frozen_ready": false
+  }
+}

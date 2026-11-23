@@ -1,302 +1,302 @@
-from __future__ import annotations
+"""
+main.py - Hệ thống Hỗ trợ Người Khiếm thị Thông minh (PBL6)
+============================================================
+Kiến trúc 5 trụ cột cốt lõi:
+1. Đa luồng bất đồng bộ: Cảm biến siêu âm HC-SR04 chạy độc lập 40Hz, báo khẩn cấp tức thời (<30ms).
+2. Hợp nhất đa phương thức: Chùm sóng nón siêu âm 30 độ gắn cự ly thực tế vào vật cản gần nhất.
+3. Bám vết thời gian thực: ByteTrack cấp Track ID duy nhất, chỉ nói 1 lần rồi bám vết ngầm.
+4. Đánh giá nguy cơ (Risk Prioritization): Xếp hạng theo mức độ nguy hại, cự ly và hướng di chuyển.
+5. Giao tiếp thích ứng đa giác quan:
+   - < 1.0m: Tiếng bíp dồn dập (tần số/nhịp tăng dần), ngắt câu nói dài, tạo phản xạ dừng ngay.
+   - 1.5m - 3.0m: Giọng nói ngắn gọn 1-2 từ khóa ("Bàn trước mặt", "Cột bên trái"), không đè tiếng.
+   - > 3.0m: Im lặng thông thoáng thính giác.
+"""
 
-import argparse
-import json
-import logging
-import pathlib
-import threading
+import os
+import sys
 import time
+import argparse
+import yaml
+import numpy as np
 
-import cv2
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, CURRENT_DIR)
 
-from core.baseline_pipeline import BaselinePipeline, BaselinePolicy, CenterROI
-from modules.audio.audio_broker import AudioBroker
-from modules.sensors.tof_vl53l1x import ToFReading, VL53L1XSensor
-from modules.vision_local.onnx_detector import OnnxDetector
+try:
+    import cv2
+    HAS_CV2 = True
+except ImportError:
+    HAS_CV2 = False
 
-LOGGER = logging.getLogger("blind_navigation")
+from modules.sensors.ultrasonic_hcsr04 import HCSR04Sensor
+from modules.tracking.byte_tracker import LightweightTracker
+from core.fusion_engine import SensorFusionEngine
+from modules.audio.audio_manager import AudioManager
+from modules.vision_local.synthetic_camera import SyntheticCamera
+from modules.vision_local.freshest_camera import FreshestCameraReader
 
-
-class SystemMetrics:
-    def __init__(self) -> None:
-        self._previous_cpu: tuple[int, int] | None = None
-
-    def sample(self) -> dict[str, float | None]:
-        return {
-            "cpu_percent": self._cpu_percent(),
-            "ram_mb": self._ram_mb(),
-            "temperature_c": self._temperature_c(),
-        }
-
-    def _cpu_percent(self) -> float | None:
-        try:
-            values = pathlib.Path("/proc/stat").read_text().splitlines()[0].split()[1:]
-            total = sum(map(int, values))
-            idle = int(values[3]) + int(values[4])
-        except (OSError, IndexError, ValueError):
-            return None
-        previous = self._previous_cpu
-        self._previous_cpu = (total, idle)
-        if previous is None:
-            return None
-        total_delta = total - previous[0]
-        idle_delta = idle - previous[1]
-        return 100 * (total_delta - idle_delta) / total_delta if total_delta else 0.0
-
-    @staticmethod
-    def _ram_mb() -> float | None:
-        try:
-            for line in pathlib.Path("/proc/self/status").read_text().splitlines():
-                if line.startswith("VmRSS:"):
-                    return float(line.split()[1]) / 1024
-        except (OSError, IndexError, ValueError):
-            return None
-        return None
-
-    @staticmethod
-    def _temperature_c() -> float | None:
-        for path in pathlib.Path("/sys/class/thermal").glob("thermal_zone*/temp"):
-            try:
-                return float(path.read_text().strip()) / 1000
-            except (OSError, ValueError):
-                continue
-        return None
+LABEL_DISPLAY = {
+    "person": "NGUOI", "chair": "GHE", "dining table": "BAN",
+    "stairs": "CAU THANG", "pole": "COT", "door": "CUA",
+    "vật cản": "VAT CAN", "bicycle": "XE DAP", "car": "O TO",
+    "motorcycle": "XE MAY", "bus": "XE BUS", "truck": "XE TAI",
+    "bottle": "CHAI NUOC", "backpack": "BALO", "cell phone": "DIEN THOAI",
+    "laptop": "MAY TINH", "tv": "MAN HINH"
+}
 
 
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Raspberry Pi 4B navigation baseline")
-    parser.add_argument(
-        "--model",
-        default="modules/vision_local/models/yolov8n.onnx",
-        help="Path to the COCO YOLOv8n ONNX model",
-    )
-    parser.add_argument("--camera", type=int, default=0, help="V4L2 camera index")
-    parser.add_argument("--input-size", type=int, default=640)
-    parser.add_argument("--duration", type=float, default=0, help="Stop after N seconds")
-    parser.add_argument("--roi-left", type=float, default=0.40)
-    parser.add_argument("--roi-right", type=float, default=0.60)
-    parser.add_argument("--cooldown", type=float, default=3.5)
-    parser.add_argument(
-        "--log-level",
-        default="INFO",
-        choices=("DEBUG", "INFO", "WARNING", "ERROR"),
-    )
+def load_config() -> dict:
+    cfg_path = os.path.join(CURRENT_DIR, "configs/config.yaml")
+    if os.path.exists(cfg_path):
+        with open(cfg_path, "r", encoding="utf-8") as f:
+            return yaml.safe_load(f)
+    return {}
+
+
+def init_detector():
+    """Khởi tạo YOLOv8 NCNN hoặc Mock Detector nếu chạy trên máy tính phát triển."""
+    param_path = os.path.join(CURRENT_DIR, "modules/vision_local/models/yolov8n.param")
+    bin_path = os.path.join(CURRENT_DIR, "modules/vision_local/models/yolov8n.bin")
+    try:
+        from modules.vision_local.yolo_ncnn_runner import YoloNcnnRunner
+        if os.path.exists(param_path) and os.path.exists(bin_path):
+            detector = YoloNcnnRunner(param_path, bin_path, target_size=320, conf_thresh=0.20)
+            print("[AI] ✅ Đã nạp thành công mô hình YOLOv8 NCNN thời gian thực (target_size=320, conf_thresh=0.20)!")
+            return detector
+    except Exception as e:
+        print(f"[AI] ⚠️ Không thể nạp YOLOv8 NCNN ({e}). Sử dụng Mock Detector.")
+
+    class SimpleMockDetector:
+        def detect(self, _):
+            return []
+    return SimpleMockDetector()
+
+
+def draw_hud(frame: np.ndarray, fused_results: list, us_dist: float, is_emergency: bool, fps: float) -> np.ndarray:
+    """Vẽ giao diện giám sát HUD trực quan (3 làn đường, góc nón siêu âm 30 độ, BBox, trạng thái)."""
+    if not HAS_CV2 or frame is None:
+        return frame
+
+    h, w = frame.shape[:2]
+    vis = frame.copy()
+    third = w // 3
+
+    # 1. Vẽ 3 làn đường (Trái - Giữa - Phải)
+    cv2.line(vis, (third, 0), (third, h), (70, 70, 70), 1)
+    cv2.line(vis, (2 * third, 0), (2 * third, h), (70, 70, 70), 1)
+    cv2.putText(vis, "TRAI", (third // 2 - 20, h - 12), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (160, 160, 160), 1)
+    cv2.putText(vis, "GIUA", (w // 2 - 20, h - 12), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 255), 1)
+    cv2.putText(vis, "PHAI", (2 * third + third // 2 - 20, h - 12), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (160, 160, 160), 1)
+
+    # 2. Vẽ hình nón chùm siêu âm HC-SR04 (~30 độ)
+    beam_w = int(third * 0.9)
+    pts = np.array([
+        [w // 2, 0],
+        [w // 2 - beam_w, h],
+        [w // 2 + beam_w, h]
+    ], np.int32)
+    overlay = vis.copy()
+    cv2.fillPoly(overlay, [pts], (255, 255, 0))
+    cv2.addWeighted(overlay, 0.12, vis, 0.88, 0, vis)
+
+    # 3. Vẽ Bounding Boxes các vật cản sau Sensor Fusion & Xếp hạng nguy cơ (Yêu cầu 4)
+    for i, item in enumerate(fused_results):
+        x1, y1, x2, y2 = item.bbox
+        is_top = (i == 0)
+        color = (0, 0, 255) if item.is_emergency else ((0, 255, 255) if is_top else (0, 255, 0))
+        cv2.rectangle(vis, (x1, y1), (x2, y2), color, 2 if not is_top else 3)
+
+        d_name = LABEL_DISPLAY.get(item.class_name, item.class_name.upper())
+        tag = f"#{item.track_id} {d_name} | {item.distance_m:.1f}m | R:{item.risk_score:.2f}"
+        if getattr(item, "is_ultrasonic_target", False):
+            tag += " [*SIEU AM]"
+        t_sz = cv2.getTextSize(tag, cv2.FONT_HERSHEY_SIMPLEX, 0.42, 1)[0]
+        cv2.rectangle(vis, (x1, max(0, y1 - 18)), (x1 + t_sz[0] + 6, max(0, y1)), color, -1)
+        cv2.putText(vis, tag, (x1 + 3, max(12, y1 - 4)), cv2.FONT_HERSHEY_SIMPLEX, 0.42, (0, 0, 0), 1)
+
+    # 4. Thanh Header trạng thái
+    hdr_color = (0, 0, 160) if is_emergency else (30, 30, 30)
+    cv2.rectangle(vis, (0, 0), (w, 30), hdr_color, -1)
+    us_str = f"{us_dist:.2f}m" if us_dist is not None else "--"
+    status_msg = f"PBL6 NAV | FPS: {fps:.1f} | SIEU AM: {us_str}"
+    if is_emergency:
+        status_msg += " | [!] KHAN CAP: DUNG LAI (BEEP)"
+    cv2.putText(vis, status_msg, (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.48, (255, 255, 255), 1)
+
+    return vis
+
+
+def main():
+    parser = argparse.ArgumentParser(description="PBL6 - Smart Blind Navigation Edge System (Ultrasonic HC-SR04)")
+    parser.add_argument("--source", type=str, default="auto", help="Nguồn video: 'auto', 'demo', 0, hoặc đường dẫn mp4")
+    parser.add_argument("--port", type=int, default=8080, help="Cổng Web Dashboard & Audio (mặc định: 8080)")
+    parser.add_argument("--headless", action="store_true", help="Chạy không cửa sổ GUI màn hình")
+    parser.add_argument("--mute-local", action="store_true",
+                        help="Tắt loa cục bộ trên Pi, chỉ phát âm thanh qua Web Dashboard trên máy tính Mac")
     args = parser.parse_args()
-    if args.duration < 0:
-        parser.error("--duration must not be negative")
-    if args.input_size <= 0:
-        parser.error("--input-size must be positive")
-    try:
-        CenterROI(args.roi_left, args.roi_right)
-        BaselinePolicy(args.cooldown)
-    except ValueError as exc:
-        parser.error(str(exc))
-    return args
 
+    print("=" * 68)
+    print("   HỆ THỐNG ĐIỀU HƯỚNG KHIẾM THỊ THÔNG MINH (PBL6 EDGE-AI)")
+    print("   Cảm biến siêu âm HC-SR04 (30-50Hz) + Camera YOLOv8 NCNN")
+    if args.mute_local:
+        print("   📢 Chế độ âm thanh: Phát qua Web Dashboard (Loa máy Mac/Điện thoại)")
+    else:
+        print("   📢 Chế độ âm thanh: Phát đồng thời Loa ngoài thiết bị & Web Dashboard")
+    print("=" * 68)
 
-def _sensor_loop(
-    sensor: VL53L1XSensor,
-    latest: list[ToFReading],
-    lock: threading.Lock,
-    stop: threading.Event,
-) -> None:
-    next_sensor_error_log = 0.0
-    while not stop.is_set():
-        try:
-            value = sensor.read()
-        except Exception:
-            now = time.monotonic()
-            if now >= next_sensor_error_log:
-                LOGGER.exception("Unexpected ToF read error; marking sample invalid")
-                next_sensor_error_log = now + 5
-            value = ToFReading(
-                None, time.time(), False, "read_error", time.monotonic()
-            )
-        with lock:
-            latest[0] = value
-        stop.wait(0.05)
+    config = load_config()
 
+    # 1. Khởi tạo Mô hình AI & Tracker
+    detector = init_detector()
+    is_mock = not hasattr(detector, "load_model")
+    tracker = LightweightTracker(max_age=12, min_hits=2, iou_threshold=0.25)
+    fusion_engine = SensorFusionEngine(config)
 
-def _try_start_tof(sensor: VL53L1XSensor) -> bool:
-    try:
-        sensor.start()
-    except Exception:
-        LOGGER.warning(
-            "WARNING: VL53L1X unavailable; continuing in degraded vision-only "
-            "mode. Distance-based alerts are disabled; do not use as a safety "
-            "navigation aid until ToF is working.",
-            exc_info=True,
-        )
-        return False
-    return True
+    # 2. Khởi tạo Audio Manager (Chống đè tiếng & Phân tầng phản hồi - Yêu cầu 5)
+    audio = AudioManager(port=args.port, guidance_cooldown_s=2.5, enable_local_audio=not args.mute_local)
 
-
-def main() -> int:
-    args = parse_args()
-    logging.basicConfig(
-        level=getattr(logging, args.log_level),
-        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    # 3. Khởi tạo Cảm biến siêu âm HC-SR04 đa luồng (Yêu cầu 1: Bất đồng bộ 40Hz)
+    us_cfg = config.get("ultrasonic", {})
+    sensor = HCSR04Sensor(
+        trig_pin=us_cfg.get("trig_pin", 23),
+        echo_pin=us_cfg.get("echo_pin", 24),
+        poll_rate_hz=us_cfg.get("poll_rate_hz", 40),
+        emergency_distance_m=us_cfg.get("emergency_distance_m", 1.0)
     )
+    # Callback khẩn cấp tức thời (<30ms) trực tiếp từ luồng siêu âm, không chờ AI
+    sensor.set_emergency_callback(lambda d: audio.trigger_emergency(d))
+    sensor.start()
+    audio.set_distance_callback(sensor.set_simulated_distance)
 
-    sensor = VL53L1XSensor()
-    sensor_available = _try_start_tof(sensor)
+    # 4. Khởi tạo Nguồn Video (Tự động quét các cổng 0, 1, 2, 3...)
+    cap = None
+    fresh_cap = None
+    synth_cam = None
+    use_synthetic = (args.source.lower() in ["demo", "synthetic"])
 
-    capture = cv2.VideoCapture(args.camera, cv2.CAP_V4L2)
-    if not capture.isOpened():
-        if sensor_available:
-            sensor.close()
-        LOGGER.error("Unable to open camera index %d", args.camera)
-        return 2
-    capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-    capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+    if not use_synthetic and HAS_CV2:
+        cam_indices = [int(args.source)] if args.source.isdigit() else [0, 1, 2, 3, 4]
+        for c_idx in cam_indices:
+            try:
+                backend = cv2.CAP_V4L2 if hasattr(cv2, 'CAP_V4L2') else cv2.CAP_ANY
+                c_test = cv2.VideoCapture(c_idx, backend)
+                if c_test.isOpened():
+                    c_test.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+                    c_test.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+                    ret_check, test_f = c_test.read()
+                    if ret_check and test_f is not None:
+                        cap = c_test
+                        fresh_cap = FreshestCameraReader(cap)
+                        print(f"[CAMERA] ✅ Mở thành công Camera vật lý tại cổng index: {c_idx} (Độ trễ tối thiểu)")
+                        break
+                    c_test.release()
+            except Exception:
+                pass
 
-    detector = None
-    try:
-        detector = OnnxDetector(args.model, input_size=args.input_size)
-    except Exception:
-        LOGGER.exception("Unable to load YOLO; continuing with ToF fail-safe only")
+        if cap is None:
+            print("[CAMERA] ⚠️ Không tìm thấy camera vật lý hoạt động -> Tự động chuyển sang Camera Mô Phỏng 3D.")
+            use_synthetic = True
+            synth_cam = SyntheticCamera()
+    else:
+        use_synthetic = True
+        synth_cam = SyntheticCamera()
 
-    pipeline = BaselinePipeline(
-        detector,
-        roi=CenterROI(args.roi_left, args.roi_right),
-        policy=BaselinePolicy(args.cooldown),
-    )
+    print(f"\n👉 Mở trình duyệt xem trực tiếp: http://localhost:{audio.port}")
+    print("👉 Phím test cự ly: [1] 3.0m (An toàn)  [2] 2.0m (Dẫn hướng)  [3] 0.5m (Khẩn cấp)  [Q] Thoát\n")
 
-    latest = [
-        ToFReading(
-            None,
-            time.time(),
-            False,
-            "unavailable" if not sensor_available else "not_started",
-            time.monotonic(),
-        )
-    ]
-    sensor_lock = threading.Lock()
-    stop = threading.Event()
-    sensor_thread = None
-    if sensor_available:
-        sensor_thread = threading.Thread(
-            target=_sensor_loop,
-            args=(sensor, latest, sensor_lock, stop),
-            name="tof-reader",
-            daemon=True,
-        )
-    audio = AudioBroker()
-    if sensor_thread is not None:
-        sensor_thread.start()
-    audio.start()
-
-    metrics = SystemMetrics()
-    start_time = time.monotonic()
-    interval_start = start_time
-    frame_count = 0
-    interval_frames = 0
-    last_detector_timings = {
-        "preprocessing": None,
-        "inference": None,
-        "postprocessing": None,
-    }
-    LOGGER.info(
-        "Baseline started model=%s tof=%s roi=[%.2f, %.2f] cooldown=%.1fs",
-        args.model,
-        "available" if sensor_available else "unavailable (vision-only)",
-        args.roi_left,
-        args.roi_right,
-        args.cooldown,
-    )
+    fps = 0.0
+    has_display = bool(os.environ.get("DISPLAY")) or (sys.platform == "darwin")
+    debug_view = (not args.headless) and HAS_CV2 and has_display
 
     try:
         while True:
-            if args.duration > 0 and time.monotonic() - start_time >= args.duration:
-                break
-            ok, frame = capture.read()
-            if not ok:
-                LOGGER.error("Camera frame read failed")
-                time.sleep(0.1)
-                continue
+            t_start = time.perf_counter()
 
-            with sensor_lock:
-                sensor_reading = latest[0]
-            result = pipeline.process_frame(frame, sensor_reading)
-            last_detector_timings = {
-                "preprocessing": None,
-                "inference": None,
-                "postprocessing": None,
-            }
-            if detector is not None and result.inference_error is None:
-                last_detector_timings = detector.last_timings_ms
-            if result.alert is not None:
-                audio.enqueue(
-                    result.alert.message,
-                    priority={
-                        "Low": 1,
-                        "Moderate": 2,
-                        "High": 3,
-                        "Critical": 4,
-                    }[result.alert.severity],
-                )
-                LOGGER.info(
-                    "Alert emitted severity=%s message=%s distance_m=%.2f "
-                    "sensor_to_alert_ms=%.2f selected=%s",
-                    result.alert.severity,
-                    result.alert.message,
-                    result.alert.distance_m,
-                    result.alert.sensor_to_alert_latency_ms,
-                    json.dumps(result.selected_detection, ensure_ascii=False)
-                    if result.selected_detection
-                    else None,
-                )
+            # Lấy khung hình tươi mới nhất (Zero Latency)
+            sim_dets = []
+            if use_synthetic and synth_cam:
+                _, frame, sim_dets, sim_d = synth_cam.read()
+                if sensor.is_simulated and not sensor.is_manually_overridden:
+                    sensor.set_simulated_distance(sim_d, manual=False)
+            elif fresh_cap and fresh_cap.isOpened():
+                ret, frame = fresh_cap.read()
+                if not ret or frame is None:
+                    time.sleep(0.01)
+                    continue
+            else:
+                frame = np.zeros((480, 640, 3), dtype=np.uint8)
 
-            frame_count += 1
-            interval_frames += 1
-            now = time.monotonic()
-            if now - interval_start >= 1:
-                system_metrics = metrics.sample()
-                fps = interval_frames / (now - interval_start)
-                selected = result.selected_detection
-                LOGGER.info(
-                    "FPS=%.2f preprocess_ms=%s inference_ms=%s postprocess_ms=%s "
-                    "sensor_to_alert_ms=%s CPU_pct=%s RAM_MB=%s temp_C=%s "
-                    "distance_m=%s tof_status=%s detections=%s selected=%s "
-                    "alert=%s frames=%d",
-                    fps,
-                    _format_metric(last_detector_timings["preprocessing"]),
-                    _format_metric(last_detector_timings["inference"]),
-                    _format_metric(last_detector_timings["postprocessing"]),
-                    _format_metric(
-                        result.alert.sensor_to_alert_latency_ms
-                        if result.alert is not None
-                        else None
-                    ),
-                    _format_metric(system_metrics["cpu_percent"]),
-                    _format_metric(system_metrics["ram_mb"]),
-                    _format_metric(system_metrics["temperature_c"]),
-                    _format_metric(sensor_reading.distance_m),
-                    sensor_reading.status,
-                    json.dumps(result.detections, ensure_ascii=False),
-                    json.dumps(selected, ensure_ascii=False) if selected else None,
-                    result.alert.message if result.alert is not None else None,
-                    frame_count,
-                )
-                interval_frames = 0
-                interval_start = now
+            # Đọc khoảng cách siêu âm mới nhất
+            raw_d, _, is_sensor_emergency = sensor.get_latest_reading()
+
+            # Nhận diện vật thể & Bám vết (Yêu cầu 3: ByteTrack)
+            detections = sim_dets if use_synthetic else detector.detect(frame)
+            tracked_items = tracker.update(detections)
+
+            # Hợp nhất cảm biến siêu âm & Xếp hạng nguy cơ (Yêu cầu 2 & 4)
+            fused_results, global_emergency = fusion_engine.fuse(tracked_items, raw_d)
+
+            # Điều phối phản hồi thích ứng đa giác quan (Yêu cầu 5)
+            if global_emergency or is_sensor_emergency or (raw_d is not None and raw_d < 1.0):
+                audio.trigger_emergency(raw_d or 0.8)
+            else:
+                audio.clear_emergency()
+                # Nếu có vật cản và nằm trong khoảng dẫn hướng (1.0m - 3.0m)
+                if fused_results:
+                    # Duyệt theo mức độ nguy cơ giảm dần, tìm vật cản ưu tiên cao nhất cần xướng âm (Yêu cầu 3, 4 & 5)
+                    for obs in fused_results:
+                        if 1.0 <= obs.distance_m <= 3.0 and obs.track_id != -1:
+                            trk = next((t for t in tracker.tracks if t.track_id == obs.track_id), None)
+                            if trk and trk.should_reannounce(obs.distance_m):
+                                spoken = audio.announce_guidance(obs.track_id, obs.class_name, obs.lane, obs.distance_m, force=trk.announced)
+                                if spoken:
+                                    trk.mark_announced(obs.distance_m)
+                                break  # Chỉ phát âm thanh cho 1 vật cản ưu tiên nhất
+
+            # Tính FPS và vẽ HUD
+            t_elapsed = time.perf_counter() - t_start
+            fps = 0.9 * fps + 0.1 * (1.0 / max(1e-4, t_elapsed))
+
+            vis_frame = draw_hud(
+                frame=frame,
+                fused_results=fused_results,
+                us_dist=raw_d,
+                is_emergency=global_emergency or is_sensor_emergency,
+                fps=fps
+            )
+            audio.update_frame(vis_frame)
+
+            # Hiển thị cửa sổ Desktop và nhận phím bấm mô phỏng
+            if debug_view:
+                cv2.imshow("PBL6 - Smart Blind Navigation", vis_frame)
+                key = cv2.waitKey(1) & 0xFF
+                if key in [ord('q'), 27]:
+                    break
+                elif key == ord('1'):
+                    sensor.set_simulated_distance(3.0, manual=True)
+                elif key == ord('2'):
+                    sensor.set_simulated_distance(2.0, manual=True)
+                elif key == ord('3'):
+                    sensor.set_simulated_distance(0.5, manual=True)
+                elif key == ord('4'):
+                    sensor.set_simulated_distance(0.7, manual=True)
+            else:
+                time.sleep(max(0.001, 0.033 - t_elapsed))
+
     except KeyboardInterrupt:
-        LOGGER.info("Shutdown requested")
+        pass
     finally:
-        stop.set()
-        if sensor_thread is not None:
-            sensor_thread.join(timeout=2)
-        audio.close()
-        capture.release()
-        if sensor_available:
-            sensor.close()
-        LOGGER.info("Baseline stopped after %d frames", frame_count)
-    return 0
-
-
-def _format_metric(value: float | None) -> str:
-    return "n/a" if value is None else f"{value:.2f}"
+        print("\n[INFO] Đang đóng hệ thống an toàn...")
+        audio.stop()
+        sensor.stop()
+        if fresh_cap:
+            fresh_cap.release()
+        elif cap and cap.isOpened():
+            cap.release()
+        if HAS_CV2:
+            cv2.destroyAllWindows()
+        print("[DONE] Đã giải phóng toàn bộ tài nguyên.")
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    main()

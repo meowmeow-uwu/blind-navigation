@@ -1,0 +1,26 @@
+class_id,class_name,shared_with_coco,coco_id,coco_name,is_critical,train_instances,valid_instances,test_instances,total_instances
+0,Bike,True,1,bicycle,True,0,1,0,1
+1,Building,False,,,False,0,0,0,0
+2,Car,True,2,car,True,1,0,1,2
+3,Person,True,0,person,True,1,1,1,3
+4,Stairs,False,,,True,0,0,1,1
+5,Traffic sign,False,,,False,0,0,0,0
+6,Electrical Pole,False,,,True,0,0,0,0
+7,Road,False,,,False,0,0,0,0
+8,Motorcycle,True,3,motorcycle,True,0,0,0,0
+9,Dustbin,False,,,False,0,0,0,0
+10,Dog,True,16,dog,False,0,0,0,0
+11,Manhole,False,,,True,0,0,0,0
+12,Tree,False,,,False,0,0,0,0
+13,Guard rail,False,,,False,0,0,0,0
+14,Pedestrian crosswalk,False,,,False,0,0,0,0
+15,Truck,True,7,truck,True,0,0,0,0
+16,Bus,True,5,bus,True,1,0,1,2
+17,Bench,True,13,bench,False,1,0,0,1
+18,Traffic Cone,False,,,False,0,0,0,0
+19,Fire hydrant,True,10,fire hydrant,False,0,0,1,1
+20,Teraffic Barrel,False,,,False,0,0,0,0
+21,Plant Pot,True,58,potted plant,False,0,0,0,0
+22,Electrical Box,False,,,False,0,0,0,0
+23,Chair,True,56,chair,False,0,0,0,0
+24,Bicycle Rack,False,,,False,0,0,0,0

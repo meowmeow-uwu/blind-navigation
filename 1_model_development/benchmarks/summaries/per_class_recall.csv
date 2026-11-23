@@ -1,0 +1,89 @@
+model,backend,class_name,gt_instances,tp_instances,recall,is_critical
+yolov8n,onnx,Bike,0,0,0.0,True
+yolov8n,onnx,Car,1,0,0.0,True
+yolov8n,onnx,Person,1,0,0.0,True
+yolov8n,onnx,Motorcycle,0,0,0.0,True
+yolov8n,onnx,Dog,0,0,0.0,False
+yolov8n,onnx,Truck,0,0,0.0,True
+yolov8n,onnx,Bus,1,1,1.0,True
+yolov8n,onnx,Bench,0,0,0.0,False
+yolov8n,onnx,Fire hydrant,1,0,0.0,False
+yolov8n,onnx,Plant Pot,0,0,0.0,False
+yolov8n,onnx,Chair,0,0,0.0,False
+yolov8n,pytorch,Bike,0,0,0.0,True
+yolov8n,pytorch,Car,1,0,0.0,True
+yolov8n,pytorch,Person,1,0,0.0,True
+yolov8n,pytorch,Motorcycle,0,0,0.0,True
+yolov8n,pytorch,Dog,0,0,0.0,False
+yolov8n,pytorch,Truck,0,0,0.0,True
+yolov8n,pytorch,Bus,1,1,1.0,True
+yolov8n,pytorch,Bench,0,0,0.0,False
+yolov8n,pytorch,Fire hydrant,1,0,0.0,False
+yolov8n,pytorch,Plant Pot,0,0,0.0,False
+yolov8n,pytorch,Chair,0,0,0.0,False
+yolo11n,onnx,Bike,0,0,0.0,True
+yolo11n,onnx,Car,1,0,0.0,True
+yolo11n,onnx,Person,1,0,0.0,True
+yolo11n,onnx,Motorcycle,0,0,0.0,True
+yolo11n,onnx,Dog,0,0,0.0,False
+yolo11n,onnx,Truck,0,0,0.0,True
+yolo11n,onnx,Bus,1,1,1.0,True
+yolo11n,onnx,Bench,0,0,0.0,False
+yolo11n,onnx,Fire hydrant,1,0,0.0,False
+yolo11n,onnx,Plant Pot,0,0,0.0,False
+yolo11n,onnx,Chair,0,0,0.0,False
+yolo11n,pytorch,Bike,0,0,0.0,True
+yolo11n,pytorch,Car,1,0,0.0,True
+yolo11n,pytorch,Person,1,0,0.0,True
+yolo11n,pytorch,Motorcycle,0,0,0.0,True
+yolo11n,pytorch,Dog,0,0,0.0,False
+yolo11n,pytorch,Truck,0,0,0.0,True
+yolo11n,pytorch,Bus,1,1,1.0,True
+yolo11n,pytorch,Bench,0,0,0.0,False
+yolo11n,pytorch,Fire hydrant,1,0,0.0,False
+yolo11n,pytorch,Plant Pot,0,0,0.0,False
+yolo11n,pytorch,Chair,0,0,0.0,False
+yolo12n,onnx,Bike,0,0,0.0,True
+yolo12n,onnx,Car,1,0,0.0,True
+yolo12n,onnx,Person,1,0,0.0,True
+yolo12n,onnx,Motorcycle,0,0,0.0,True
+yolo12n,onnx,Dog,0,0,0.0,False
+yolo12n,onnx,Truck,0,0,0.0,True
+yolo12n,onnx,Bus,1,1,1.0,True
+yolo12n,onnx,Bench,0,0,0.0,False
+yolo12n,onnx,Fire hydrant,1,0,0.0,False
+yolo12n,onnx,Plant Pot,0,0,0.0,False
+yolo12n,onnx,Chair,0,0,0.0,False
+yolo12n,pytorch,Bike,0,0,0.0,True
+yolo12n,pytorch,Car,1,0,0.0,True
+yolo12n,pytorch,Person,1,0,0.0,True
+yolo12n,pytorch,Motorcycle,0,0,0.0,True
+yolo12n,pytorch,Dog,0,0,0.0,False
+yolo12n,pytorch,Truck,0,0,0.0,True
+yolo12n,pytorch,Bus,1,1,1.0,True
+yolo12n,pytorch,Bench,0,0,0.0,False
+yolo12n,pytorch,Fire hydrant,1,0,0.0,False
+yolo12n,pytorch,Plant Pot,0,0,0.0,False
+yolo12n,pytorch,Chair,0,0,0.0,False
+yolo26n,onnx,Bike,0,0,0.0,True
+yolo26n,onnx,Car,1,0,0.0,True
+yolo26n,onnx,Person,1,0,0.0,True
+yolo26n,onnx,Motorcycle,0,0,0.0,True
+yolo26n,onnx,Dog,0,0,0.0,False
+yolo26n,onnx,Truck,0,0,0.0,True
+yolo26n,onnx,Bus,1,1,1.0,True
+yolo26n,onnx,Bench,0,0,0.0,False
+yolo26n,onnx,Fire hydrant,1,0,0.0,False
+yolo26n,onnx,Plant Pot,0,0,0.0,False
+yolo26n,onnx,Chair,0,0,0.0,False
+yolo26n,pytorch,Bike,0,0,0.0,True
+yolo26n,pytorch,Car,1,0,0.0,True
+yolo26n,pytorch,Person,1,0,0.0,True
+yolo26n,pytorch,Motorcycle,0,0,0.0,True
+yolo26n,pytorch,Dog,0,0,0.0,False
+yolo26n,pytorch,Truck,0,0,0.0,True
+yolo26n,pytorch,Bus,1,1,1.0,True
+yolo26n,pytorch,Bench,0,0,0.0,False
+yolo26n,pytorch,Fire hydrant,1,0,0.0,False
+yolo26n,pytorch,Plant Pot,0,0,0.0,False
+yolo26n,pytorch,Chair,0,0,0.0,False

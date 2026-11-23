@@ -1,0 +1,22 @@
+benchmark:
+  input_size: 320
+  batch_size: 1
+  warmup_runs: 50
+  measured_runs: 1000
+  repeat: 3
+  num_threads: 4
+  confidence_threshold: 0.25
+  nms_iou_threshold: 0.45
+  max_detections: 300
+  seed: 42
+
+features:
+  include_preprocess: true
+  include_postprocess: true
+  render: false
+  tracking: false
+  audio: false
+
+output:
+  raw_dir: benchmarks/raw
+  summary_dir: benchmarks/summaries

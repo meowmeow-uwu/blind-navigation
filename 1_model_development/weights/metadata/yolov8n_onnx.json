@@ -1,0 +1,30 @@
+{
+  "model": "yolov8n",
+  "format": "onnx",
+  "precision": "fp32",
+  "input_size": 320,
+  "batch_size": 1,
+  "dynamic": false,
+  "opset": 12,
+  "nms_included": false,
+  "simplify": true,
+  "onnx_path": "weights/onnx/yolov8n_320_fp32.onnx",
+  "onnx_sha256": "b23211ee9efaa3d650054de2f9706482b56ea36c4c3bf914f85c904d68f50b0f",
+  "onnx_size_bytes": 12725063,
+  "onnx_size_mb": 12.14,
+  "source_checkpoint": "weights/pytorch/yolov8n.pt",
+  "export_config": {
+    "format": "onnx",
+    "imgsz": 320,
+    "batch": 1,
+    "dynamic": false,
+    "simplify": true,
+    "opset": 12,
+    "half": false,
+    "int8": false,
+    "nms": false
+  },
+  "export_time_sec": 1.5,
+  "exported_at": "2026-11-07T10:11:42.645885Z",
+  "status": "success"
+}

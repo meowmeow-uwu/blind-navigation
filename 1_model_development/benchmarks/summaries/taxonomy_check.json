@@ -1,0 +1,120 @@
+{
+  "models": [
+    {
+      "model": "yolov8n",
+      "task": "detect",
+      "parameters": 3157200,
+      "class_count": 80,
+      "first_10_classes": [
+        "person",
+        "bicycle",
+        "car",
+        "motorcycle",
+        "airplane",
+        "bus",
+        "train",
+        "truck",
+        "boat",
+        "traffic light"
+      ],
+      "stride": 32,
+      "default_imgsz": 640,
+      "checkpoint_size_mb": 6.25,
+      "class_names_hash": "da078b5d523c93ff6407be95724e48bfb4e89736567ced4394c770d27b192838",
+      "key_class_ids": {
+        "person": 0,
+        "bicycle": 1,
+        "car": 2,
+        "motorcycle": 3
+      }
+    },
+    {
+      "model": "yolo11n",
+      "task": "detect",
+      "parameters": 2624080,
+      "class_count": 80,
+      "first_10_classes": [
+        "person",
+        "bicycle",
+        "car",
+        "motorcycle",
+        "airplane",
+        "bus",
+        "train",
+        "truck",
+        "boat",
+        "traffic light"
+      ],
+      "stride": 32,
+      "default_imgsz": 640,
+      "checkpoint_size_mb": 5.35,
+      "class_names_hash": "da078b5d523c93ff6407be95724e48bfb4e89736567ced4394c770d27b192838",
+      "key_class_ids": {
+        "person": 0,
+        "bicycle": 1,
+        "car": 2,
+        "motorcycle": 3
+      }
+    },
+    {
+      "model": "yolo12n",
+      "task": "detect",
+      "parameters": 2603056,
+      "class_count": 80,
+      "first_10_classes": [
+        "person",
+        "bicycle",
+        "car",
+        "motorcycle",
+        "airplane",
+        "bus",
+        "train",
+        "truck",
+        "boat",
+        "traffic light"
+      ],
+      "stride": 32,
+      "default_imgsz": 640,
+      "checkpoint_size_mb": 5.34,
+      "class_names_hash": "da078b5d523c93ff6407be95724e48bfb4e89736567ced4394c770d27b192838",
+      "key_class_ids": {
+        "person": 0,
+        "bicycle": 1,
+        "car": 2,
+        "motorcycle": 3
+      }
+    },
+    {
+      "model": "yolo26n",
+      "task": "detect",
+      "parameters": 2572280,
+      "class_count": 80,
+      "first_10_classes": [
+        "person",
+        "bicycle",
+        "car",
+        "motorcycle",
+        "airplane",
+        "bus",
+        "train",
+        "truck",
+        "boat",
+        "traffic light"
+      ],
+      "stride": 32,
+      "default_imgsz": 640,
+      "checkpoint_size_mb": 5.29,
+      "class_names_hash": "da078b5d523c93ff6407be95724e48bfb4e89736567ced4394c770d27b192838",
+      "key_class_ids": {
+        "person": 0,
+        "bicycle": 1,
+        "car": 2,
+        "motorcycle": 3
+      }
+    }
+  ],
+  "skipped": {},
+  "identical_taxonomy": true,
+  "problems": [],
+  "verdict": "OK: taxonomies are identical; pretrained recall can be compared directly."
+}

@@ -1,0 +1,215 @@
+{
+  "inspected_at": "2026-11-07T10:12:48.925262Z",
+  "models_dir": "weights/onnx",
+  "total_models": 4,
+  "valid_models": 4,
+  "invalid_models": 0,
+  "models": {
+    "yolo11n_320_fp32": {
+      "model": "yolo11n_320_fp32",
+      "path": "weights/onnx/yolo11n_320_fp32.onnx",
+      "file_size_mb": 10.12,
+      "sha256": "f2e265d0d0ccd1f64c86b3d77e0ae85517268020a7aa4a8e4881ceeb841236e3",
+      "graph_valid": true,
+      "error": null,
+      "opset": 12,
+      "inputs": [
+        {
+          "name": "images",
+          "dtype": "FLOAT",
+          "shape": [
+            1,
+            3,
+            320,
+            320
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "output0",
+          "dtype": "FLOAT",
+          "shape": [
+            1,
+            84,
+            2100
+          ]
+        }
+      ],
+      "node_count": 321,
+      "op_types": [
+        "Add",
+        "Concat",
+        "Conv",
+        "Div",
+        "MatMul",
+        "MaxPool",
+        "Mul",
+        "Reshape",
+        "Resize",
+        "Sigmoid",
+        "Slice",
+        "Softmax",
+        "Split",
+        "Sub",
+        "Transpose"
+      ]
+    },
+    "yolo12n_320_fp32": {
+      "model": "yolo12n_320_fp32",
+      "path": "weights/onnx/yolo12n_320_fp32.onnx",
+      "file_size_mb": 10.09,
+      "sha256": "b9fe632d27ac7f15bae020a2e4cde2088dceab8e154c74e64eae337511857cbd",
+      "graph_valid": true,
+      "error": null,
+      "opset": 12,
+      "inputs": [
+        {
+          "name": "images",
+          "dtype": "FLOAT",
+          "shape": [
+            1,
+            3,
+            320,
+            320
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "output0",
+          "dtype": "FLOAT",
+          "shape": [
+            1,
+            84,
+            2100
+          ]
+        }
+      ],
+      "node_count": 485,
+      "op_types": [
+        "Add",
+        "Concat",
+        "Conv",
+        "Div",
+        "MatMul",
+        "Mul",
+        "Reshape",
+        "Resize",
+        "Sigmoid",
+        "Slice",
+        "Softmax",
+        "Split",
+        "Sub",
+        "Transpose"
+      ]
+    },
+    "yolo26n_320_fp32": {
+      "model": "yolo26n_320_fp32",
+      "path": "weights/onnx/yolo26n_320_fp32.onnx",
+      "file_size_mb": 9.36,
+      "sha256": "ce0da533184b3df3ebcd2c527f7dd3225f0dba0d9664f3788d1a86f0be33d3ef",
+      "graph_valid": true,
+      "error": null,
+      "opset": 12,
+      "inputs": [
+        {
+          "name": "images",
+          "dtype": "FLOAT",
+          "shape": [
+            1,
+            3,
+            320,
+            320
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "output0",
+          "dtype": "FLOAT",
+          "shape": [
+            1,
+            300,
+            6
+          ]
+        }
+      ],
+      "node_count": 384,
+      "op_types": [
+        "Add",
+        "Cast",
+        "Concat",
+        "Conv",
+        "Div",
+        "Expand",
+        "Flatten",
+        "GatherElements",
+        "MatMul",
+        "MaxPool",
+        "Mod",
+        "Mul",
+        "ReduceMax",
+        "Reshape",
+        "Resize",
+        "Sigmoid",
+        "Slice",
+        "Softmax",
+        "Split",
+        "Sub",
+        "TopK",
+        "Transpose",
+        "Unsqueeze"
+      ]
+    },
+    "yolov8n_320_fp32": {
+      "model": "yolov8n_320_fp32",
+      "path": "weights/onnx/yolov8n_320_fp32.onnx",
+      "file_size_mb": 12.14,
+      "sha256": "b23211ee9efaa3d650054de2f9706482b56ea36c4c3bf914f85c904d68f50b0f",
+      "graph_valid": true,
+      "error": null,
+      "opset": 12,
+      "inputs": [
+        {
+          "name": "images",
+          "dtype": "FLOAT",
+          "shape": [
+            1,
+            3,
+            320,
+            320
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "output0",
+          "dtype": "FLOAT",
+          "shape": [
+            1,
+            84,
+            2100
+          ]
+        }
+      ],
+      "node_count": 234,
+      "op_types": [
+        "Add",
+        "Concat",
+        "Conv",
+        "Div",
+        "MaxPool",
+        "Mul",
+        "Reshape",
+        "Resize",
+        "Sigmoid",
+        "Slice",
+        "Softmax",
+        "Split",
+        "Sub",
+        "Transpose"
+      ]
+    }
+  }
+}

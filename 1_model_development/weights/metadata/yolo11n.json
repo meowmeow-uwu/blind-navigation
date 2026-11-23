@@ -1,0 +1,22 @@
+{
+  "name": "yolo11n",
+  "role": "stable_recent",
+  "checkpoint": "yolo11n.pt",
+  "source": "official",
+  "sha256": "0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1",
+  "file_size_bytes": 5613764,
+  "file_size_mb": 5.35,
+  "parameters": 2624080,
+  "task": "detect",
+  "class_count": 80,
+  "class_names_hash": "da078b5d523c93ff6407be95724e48bfb4e89736567ced4394c770d27b192838",
+  "input_size": 320,
+  "framework": {
+    "ultralytics": "8.4.204",
+    "torch": "2.14.1+cpu",
+    "python": "3.10.12"
+  },
+  "status": "validated",
+  "error": null,
+  "source_url": "https://github.com/ultralytics/assets/releases/download/v8.4.0/yolo11n.pt"
+}

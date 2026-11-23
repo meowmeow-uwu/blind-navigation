@@ -1,0 +1,50 @@
+{
+  "yolov8n": {
+    "model": "yolov8n",
+    "checkpoint": "/home/dutai/pbl6-blind-navigation/rod-paper/yolov8n-rod/yolov8n_best.pt",
+    "device": "0",
+    "mAP50": 0.9098874877223397,
+    "mAP50_95": 0.7419336649976312,
+    "precision": 0.9094216067480764,
+    "recall": 0.8677135534064717,
+    "host_inference_ms": 1.35,
+    "host_fps": 395.83,
+    "eval_duration_sec": 10.27
+  },
+  "yolov9t": {
+    "model": "yolov9t",
+    "checkpoint": "/home/dutai/pbl6-blind-navigation/rod-paper/yolov9t/yolov9t_best.pt",
+    "device": "0",
+    "mAP50": 0.919018635031576,
+    "mAP50_95": 0.7716659084263741,
+    "precision": 0.9006054262653688,
+    "recall": 0.8831368623573052,
+    "host_inference_ms": 2.15,
+    "host_fps": 281.5,
+    "eval_duration_sec": 8.59
+  },
+  "yolov12n": {
+    "model": "yolov12n",
+    "checkpoint": "/home/dutai/pbl6-blind-navigation/rod-paper/yolov12n/yolov12n_best.pt",
+    "device": "0",
+    "mAP50": 0.9112156573328629,
+    "mAP50_95": 0.7607597136573565,
+    "precision": 0.8966763509338653,
+    "recall": 0.8879475031351484,
+    "host_inference_ms": 2.46,
+    "host_fps": 261.51,
+    "eval_duration_sec": 8.84
+  },
+  "yolov26n": {
+    "model": "yolov26n",
+    "checkpoint": "/home/dutai/pbl6-blind-navigation/rod-paper/yolov26n/yolo26n_best.pt",
+    "device": "0",
+    "mAP50": 0.916301567146553,
+    "mAP50_95": 0.7711000706844575,
+    "precision": 0.9104385079988089,
+    "recall": 0.8887775420064308,
+    "host_inference_ms": 1.63,
+    "host_fps": 334.88,
+    "eval_duration_sec": 7.47
+  }
+}
