@@ -3,7 +3,7 @@
 # Đề tài PBL6: Hệ thống hỗ trợ người khiếm thị
 
 system:
-  device_name: "blind-nav-pi4"
+  device_name: "raspi"
   log_level: "INFO"
   debug_view: true                   # Hiển thị HUD khi chạy trên PC/màn hình ngoài
 

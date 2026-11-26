@@ -71,3 +71,22 @@ def test_ws_tel():
 			msg=ws.receive_json()
 			assert msg["type"]=="telemetry"
 			assert "gps" in msg["data"]
+def test_edg_missing_hw_errors():
+	from backend.cfg import load_cfg
+	from backend.edge import Edg_st,get_edg,upd_edg
+	cfg=load_cfg()
+	Edg_st["last_ts"]=0.0
+	st=get_edg(cfg)
+	assert st["connected"] is False
+	assert st["camera"]["connected"] is False
+	assert "chưa kết nối" in st["camera"]["error"].lower()
+	assert st["ultrasonic"]["connected"] is False
+	assert st["ultrasonic"]["distance_m"] is None
+	assert st["gps"]["connected"] is False
+	assert st["gps"]["lat"] is None and st["gps"]["lng"] is None
+	assert "gps" in st["gps"]["error"].lower()
+	assert st["system"]["battery_pct"] is None
+	st2=upd_edg({"camera":{"connected":True,"error":""},"ultrasonic":{"connected":False,"distance_m":None,"error":"Chưa kết nối cảm biến siêu âm"}},cfg)
+	assert st2["connected"] is True
+	assert st2["camera"]["connected"] is True
+	assert st2["ultrasonic"]["distance_m"] is None

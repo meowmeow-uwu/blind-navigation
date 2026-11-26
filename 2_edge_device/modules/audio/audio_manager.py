@@ -50,7 +50,7 @@ def _create_local_beep_wav():
             f.setsampwidth(2)
             f.setframerate(sample_rate)
             for i in range(n_samples):
-                val = int(20000.0 * math.sin(2.0 * math.pi * 1400.0 * (i / sample_rate)))
+                val = int(28000.0 * math.sin(2.0 * math.pi * 1400.0 * (i / sample_rate)))
                 f.writeframes(struct.pack("<h", val))
     except Exception:
         pass
@@ -273,6 +273,14 @@ class VoiceRequestHandler(SimpleHTTPRequestHandler):
             self.end_headers()
             payload = self.manager_instance.get_alert_state()
             self.wfile.write(json.dumps(payload, ensure_ascii=False).encode('utf-8'))
+        elif parsed.path == '/telemetry':
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            payload = self.manager_instance.get_telemetry()
+            self.wfile.write(json.dumps(payload, ensure_ascii=False).encode('utf-8'))
         elif parsed.path == '/set_dist':
             query = parse_qs(parsed.query)
             if 'val' in query and self.manager_instance.dist_callback:
@@ -316,6 +324,27 @@ class VoiceRequestHandler(SimpleHTTPRequestHandler):
         else:
             self.send_error(404)
 
+    def do_POST(self):
+        parsed = urlparse(self.path)
+        if parsed.path == '/tts':
+            try:
+                length = int(self.headers.get('Content-Length', '0'))
+                raw = self.rfile.read(length) if length > 0 else b'{}'
+                obj = json.loads(raw.decode('utf-8'))
+                txt = str(obj.get('text', '')).strip()
+                ok = self.manager_instance.speak_priority(txt) if txt else False
+                self.send_response(200 if ok else 400)
+                self.send_header('Content-type', 'application/json')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                self.wfile.write(json.dumps({"ok": ok, "text": txt}, ensure_ascii=False).encode('utf-8'))
+            except Exception as e:
+                self.send_response(400)
+                self.end_headers()
+                self.wfile.write(json.dumps({"ok": False, "error": str(e)}).encode('utf-8'))
+        else:
+            self.send_error(404)
+
 
 class ReusableThreadingHTTPServer(ThreadingMixIn, HTTPServer):
     """Máy chủ HTTP đa luồng (Multi-threaded) chống nghẽn luồng video feed."""
@@ -337,6 +366,10 @@ class AudioManager:
         self.is_emergency = False
         self.emergency_distance = 0.0
         self.last_beep_time = 0.0
+        self.speech_language = "vi"
+        self.speech_rate = 185
+        self.speaker_volume = 100
+        self.beep_enabled = True
 
         # Quản lý giọng nói dẫn hướng (Yêu cầu 3 & 5: Đọc 1 lần theo Track ID)
         self.announced_track_ids: Set[int] = set()
@@ -346,12 +379,19 @@ class AudioManager:
 
         # Tiến trình âm thanh cục bộ đang chạy
         self._current_proc: Optional[subprocess.Popen] = None
+        self._current_is_priority: bool = False
         self._proc_lock = threading.Lock()
+        self._ptt_active: bool = False
+        self._ptt_proc: Optional[subprocess.Popen] = None
+        self._ptt_lock = threading.Lock()
+        self._priority_until: float = 0.0
 
-        # Web Streaming Frame
+        # Web Streaming Frame & Telemetry
         self._current_jpeg = None
         self._frame_id = 0
         self._frame_lock = threading.Lock()
+        self._telemetry_lock = threading.Lock()
+        self._telemetry = {}
         self.dist_callback = None
         self.is_running = True
 
@@ -414,6 +454,17 @@ class AudioManager:
         with self._frame_lock:
             return self._frame_id, self._current_jpeg
 
+    def update_telemetry(self, payload: dict):
+        """Lưu trạng thái telemetry mới nhất để phục vụ HTTP GET /telemetry."""
+        with self._telemetry_lock:
+            self._telemetry = dict(payload)
+
+    def get_telemetry(self) -> dict:
+        with self._telemetry_lock:
+            if self._telemetry:
+                return dict(self._telemetry)
+        return {"alert": self.get_alert_state()}
+
     # =========================================================================
     # YÊU CẦU 5: PHẢN HỒI PHÂN TẦNG (KHẨN CẤP vs DẪN HƯỚNG)
     # =========================================================================
@@ -421,14 +472,19 @@ class AudioManager:
     def trigger_emergency(self, distance_m: float):
         """
         KÊNH KHẨN CẤP (< 1.0m) (Yêu cầu 1 & 5):
-        - Ngắt ngay lập tức câu nói dẫn hướng đang nói.
+        - Ngắt ngay lập tức câu nói dẫn hướng đang nói (nhưng không ngắt giọng người thân/PTT).
         - Phát tiếng bíp với tần số & nhịp tăng dần theo cự ly gần.
         """
         self.is_emergency = True
         self.emergency_distance = distance_m
 
-        # 1. Ngắt ngay tiến trình nói nếu đang nói dở
-        self._preempt_speech()
+        # 1. Ngắt câu dẫn hướng tự động (nhưng giữ lời nhắc/thoại từ người thân)
+        if not self._current_is_priority:
+            self._preempt_speech()
+
+        # Khi đang phát giọng người thân (PTT hoặc lời nhắc web), tạm nhường loa để nghe rõ tiếng
+        if self._ptt_active or self._current_is_priority or (time.time() < self._priority_until):
+            return
 
         # 2. Tính toán chu kỳ bíp tỉ lệ với khoảng cách (gần = bíp dồn dập)
         # 0.1m -> 0.15s; 0.9m -> 0.50s
@@ -486,10 +542,90 @@ class AudioManager:
 
         # Đưa vào hàng đợi phát âm thanh tuần tự
         try:
-            self._speech_queue.put_nowait(speech_text)
+            self._speech_queue.put_nowait((speech_text, False))
             return True
         except queue.Full:
             return False
+
+    def speak_priority(self, text: str) -> bool:
+        """Phát ngay lời nhắc thoại ưu tiên từ người thân (Web Dashboard)."""
+        msg = (text or "").strip()
+        if not msg:
+            return False
+        self._priority_until = time.time() + 4.0
+        self.last_voice_time = time.time()
+        self.guidance_id += 1
+        self.current_guidance_text = msg
+        print(f"📢 [NGƯỜI THÂN NHẮC]: '{msg}'")
+
+        # Ngắt câu dẫn hướng cũ & làm trống hàng đợi để phát ngay lời nhắc mới
+        self._preempt_speech()
+        while True:
+            try:
+                self._speech_queue.get_nowait()
+            except queue.Empty:
+                break
+        try:
+            self._speech_queue.put_nowait((msg, True))
+            return True
+        except queue.Full:
+            return False
+
+    def start_ptt(self):
+        """Mở luồng phát âm thanh trực tiếp (PCM16 16kHz) khi người thân nhấn giữ micro."""
+        self._ptt_active = True
+        self._preempt_speech()
+        if not self.enable_local_audio or not shutil.which("aplay"):
+            return
+        with self._ptt_lock:
+            if self._ptt_proc is not None and self._ptt_proc.poll() is None:
+                return
+            try:
+                self._ptt_proc = subprocess.Popen(
+                    ["aplay", "-q", "-r", "16000", "-f", "S16_LE", "-c", "1", "-t", "raw"],
+                    stdin=subprocess.PIPE,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+            except Exception:
+                self._ptt_proc = None
+
+    def feed_ptt_pcm(self, raw_pcm: bytes):
+        """Đưa các gói PCM16 từ Web Dashboard ra loa Raspberry Pi."""
+        if not self.enable_local_audio or not raw_pcm:
+            return
+        with self._ptt_lock:
+            proc = self._ptt_proc
+        if proc is None or proc.poll() is not None:
+            self.start_ptt()
+            with self._ptt_lock:
+                proc = self._ptt_proc
+        if proc is not None and proc.stdin is not None:
+            try:
+                proc.stdin.write(raw_pcm)
+                proc.stdin.flush()
+            except Exception:
+                self.stop_ptt()
+
+    def stop_ptt(self):
+        """Đóng luồng âm thanh Push-to-Talk."""
+        self._ptt_active = False
+        with self._ptt_lock:
+            proc = self._ptt_proc
+            self._ptt_proc = None
+        if proc is not None:
+            try:
+                if proc.stdin:
+                    proc.stdin.close()
+            except Exception:
+                pass
+            try:
+                proc.wait(timeout=0.5)
+            except Exception:
+                try:
+                    proc.terminate()
+                except Exception:
+                    pass
 
     # =========================================================================
     # QUẢN LÝ TIẾN TRÌNH ÂM THANH CỤC BỘ (ZERO OVERLAPPING GUARANTEE)
@@ -497,7 +633,7 @@ class AudioManager:
 
     def _play_local_beep(self):
         """Phát 1 tiếng bíp cục bộ trên máy tính/Raspberry Pi."""
-        if not self.enable_local_audio:
+        if not self.enable_local_audio or not self.beep_enabled:
             return
 
         def _worker():
@@ -517,6 +653,44 @@ class AudioManager:
 
         threading.Thread(target=_worker, daemon=True).start()
 
+    def set_system_volume(self, volume_pct: int):
+        """Áp dụng mức âm lượng loa thật trên Raspberry Pi qua PipeWire (wpctl) hoặc ALSA (amixer)."""
+        pct = max(0, min(100, int(volume_pct)))
+        self.speaker_volume = pct
+        if not self.enable_local_audio:
+            return
+        try:
+            if shutil.which("wpctl"):
+                subprocess.run(["wpctl", "set-mute", "@DEFAULT_AUDIO_SINK@", "0"],
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+                subprocess.run(["wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", f"{pct / 100.0:.2f}"],
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+            elif shutil.which("amixer"):
+                for ctrl in ("PCM", "Headphone", "Master"):
+                    subprocess.run(["amixer", "sset", ctrl, f"{pct}%", "unmute"],
+                                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+        except Exception:
+            pass
+
+    def apply_audio_config(self, audio_cfg: dict):
+        """Cập nhật thông số âm thanh từ Web Dashboard hoặc config.yaml."""
+        if not isinstance(audio_cfg, dict):
+            return
+        if "language" in audio_cfg:
+            self.speech_language = str(audio_cfg["language"] or "vi")
+        if "rate" in audio_cfg:
+            try:
+                self.speech_rate = max(100, min(260, int(audio_cfg["rate"])))
+            except Exception:
+                pass
+        if "beep_enabled" in audio_cfg:
+            self.beep_enabled = bool(audio_cfg["beep_enabled"])
+        if "speaker_volume" in audio_cfg:
+            try:
+                self.set_system_volume(int(audio_cfg["speaker_volume"]))
+            except Exception:
+                pass
+
     def _preempt_speech(self):
         """Ngắt ngay tiến trình nói khi có sự kiện khẩn cấp."""
         with self._proc_lock:
@@ -526,19 +700,29 @@ class AudioManager:
                 except Exception:
                     pass
                 self._current_proc = None
+            self._current_is_priority = False
 
     def _speech_worker(self):
         """Luồng chuyên trách phát âm thanh duy nhất để không bao giờ bị đè tiếng."""
         while self.is_running:
             try:
-                text = self._speech_queue.get(timeout=0.2)
+                item = self._speech_queue.get(timeout=0.2)
             except queue.Empty:
                 continue
 
-            if not self.enable_local_audio or self.is_emergency:
-                continue  # Bỏ qua nếu tắt loa cục bộ hoặc đang khẩn cấp
+            if isinstance(item, tuple):
+                text, is_priority = item
+            else:
+                text, is_priority = item, False
 
+            if not self.enable_local_audio or self._ptt_active:
+                continue
+            if self.is_emergency and not is_priority:
+                continue  # Bỏ qua dẫn hướng tự động khi đang khẩn cấp
+
+            proc = None
             with self._proc_lock:
+                self._current_is_priority = is_priority
                 try:
                     if IS_MAC:
                         self._current_proc = subprocess.Popen(
@@ -547,22 +731,29 @@ class AudioManager:
                         )
                     elif shutil.which("espeak-ng"):
                         self._current_proc = subprocess.Popen(
-                            ["espeak-ng", "-v", "vi", "-s", "175", text],
+                            ["espeak-ng", "-v", self.speech_language, "-s", str(self.speech_rate), "-a", "180", text],
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
                         )
                     elif shutil.which("espeak"):
                         self._current_proc = subprocess.Popen(
-                            ["espeak", "-v", "vi", "-s", "175", text],
+                            ["espeak", "-v", self.speech_language, "-s", str(self.speech_rate), "-a", "180", text],
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
                         )
                 except Exception:
                     self._current_proc = None
+                proc = self._current_proc
 
-            if self._current_proc:
+            if proc:
                 try:
-                    self._current_proc.wait(timeout=3.0)
+                    proc.wait(timeout=4.0)
                 except Exception:
                     self._preempt_speech()
+            with self._proc_lock:
+                if self._current_proc is proc:
+                    self._current_proc = None
+                self._current_is_priority = False
+                if is_priority:
+                    self._priority_until = 0.0
 
     def get_alert_state(self) -> dict:
         """Đóng gói trạng thái gửi cho Web Dashboard."""
@@ -588,6 +779,7 @@ class AudioManager:
 
     def stop(self):
         self.is_running = False
+        self.stop_ptt()
         self._preempt_speech()
         if self.server:
             try:

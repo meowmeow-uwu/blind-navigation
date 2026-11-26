@@ -1,20 +1,20 @@
 system:
-  device_name: blind-nav-pi4
+  device_name: raspi
   log_level: INFO
-  mode: simulation
+  mode: edge_live
   sync_to_edge: false
 edge:
-  edge_host: 192.168.1.50
+  edge_host: 172.20.10.3
   edge_port: 8080
   mqtt_enabled: false
   mqtt_host: localhost
   mqtt_port: 1883
 model:
-  name: yolov26n
-  backend: onnx
-  precision: int8
+  name: yolov8n
+  backend: ncnn
+  precision: fp32
   imgsz: 320
-  confidence_threshold: 0.25
+  confidence_threshold: 0.2
   nms_iou_threshold: 0.45
 camera:
   frame_width: 640
@@ -23,36 +23,36 @@ camera:
   f_x: 480.0
   f_y: 480.0
   camera_height_m: 1.45
-  tilt_angle_deg: 5.0
+  tilt_angle_deg: 5
 ultrasonic:
   trig_pin: 23
   echo_pin: 24
-  beam_angle_deg: 30.0
+  beam_angle_deg: 30
   min_range_m: 0.03
-  max_range_m: 4.0
+  max_range_m: 4
   poll_rate_hz: 40
-  emergency_distance_m: 1.0
+  emergency_distance_m: 1
 kalman_filter:
   q_accel_noise: 0.5
   r_ultrasonic: 0.0025
   r_camera: 0.09
-  gating_threshold: 4.0
+  gating_threshold: 4
 risk_scoring:
   w_distance: 0.4
   w_class: 0.3
   w_heading: 0.2
   w_ttc: 0.1
-  ttc_critical_s: 2.0
+  ttc_critical_s: 2
 audio:
   language: vi
   rate: 200
-  speaker_volume: 85
+  speaker_volume: 100
   emergency_cooldown_s: 0.6
-  tts_cooldown_s: 2.0
+  tts_cooldown_s: 2
   beep_enabled: true
   ptt_preempt: true
 gps:
   home_lat: 16.0738
   home_lng: 108.1499
-  geofence_radius_m: 250.0
+  geofence_radius_m: 250
   trail_limit: 120

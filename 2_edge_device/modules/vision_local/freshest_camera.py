@@ -27,9 +27,14 @@ class FreshestCameraReader:
     """
     Trình bao bọc cv2.VideoCapture đa luồng giúp loại bỏ hoàn toàn độ trễ tích lũy.
     """
-    def __init__(self, cap):
+    def __init__(self, cap, stale_timeout: float = 1.5, max_failures: int = 15):
         self.cap = cap
+        self.stale_timeout = stale_timeout
+        self.max_failures = max_failures
         self._latest_frame: Optional[np.ndarray] = None
+        self._last_frame_ts: float = time.time()
+        self._consecutive_failures: int = 0
+        self._failed: bool = False
         self._new_frame_event = threading.Event()
         self._running = False
         self._lock = threading.Lock()
@@ -55,21 +60,33 @@ class FreshestCameraReader:
             if ret and frame is not None:
                 with self._lock:
                     self._latest_frame = frame
+                    self._last_frame_ts = time.time()
+                    self._consecutive_failures = 0
                 self._new_frame_event.set()
             else:
-                time.sleep(0.005)
+                self._consecutive_failures += 1
+                if self._consecutive_failures >= self.max_failures:
+                    self._failed = True
+                    self._new_frame_event.set()
+                    break
+                time.sleep(0.02)
 
     def read(self, timeout: float = 0.5) -> Tuple[bool, Optional[np.ndarray]]:
-        """Lấy khung hình tươi mới nhất vừa được chụp từ phần cứng."""
-        self._new_frame_event.wait(timeout=timeout)
+        """Lấy khung hình tươi mới nhất; trả về (False, None) nếu camera đơ hoặc mất kết nối."""
+        if self._failed:
+            return False, None
+        got_new = self._new_frame_event.wait(timeout=timeout)
         self._new_frame_event.clear()
+        if self._failed:
+            return False, None
         with self._lock:
-            if self._latest_frame is not None:
+            is_fresh = got_new or ((time.time() - self._last_frame_ts) <= self.stale_timeout)
+            if self._latest_frame is not None and is_fresh:
                 return True, self._latest_frame
         return False, None
 
     def isOpened(self) -> bool:
-        return self.cap.isOpened() if self.cap else False
+        return (not self._failed) and (self.cap.isOpened() if self.cap else False)
 
     def release(self):
         self._running = False

@@ -60,6 +60,8 @@ body{margin:0;background:var(--bg);color:var(--tx);font-family:"Segoe UI",system
 .v_box img{width:100%;height:100%;object-fit:contain;display:block}
 .v_ov{position:absolute;top:10px;left:10px;display:flex;align-items:center;gap:6px;padding:4px 9px;border-radius:999px;background:rgba(15,23,42,.72);color:#fff;font-size:11px;font-weight:700}
 .dot{width:8px;height:8px;border-radius:50%;background:#22c55e}
+.dot.err{background:#ef4444}
+.v_err{position:absolute;top:10px;right:10px;padding:5px 11px;border-radius:999px;background:rgba(220,38,38,.92);color:#fff;font-weight:700;font-size:12px}
 .v_emg{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);padding:6px 14px;border-radius:8px;background:rgba(220,38,38,.92);color:#fff;font-weight:700;font-size:13px}
 .scn_b{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid var(--bd)}
 .lbl{font-size:12px;color:var(--mt);font-weight:600}
@@ -83,6 +85,7 @@ body{margin:0;background:var(--bg);color:var(--tx);font-family:"Segoe UI",system
 .chp:hover{background:#eff6ff;border-color:#93c5fd}
 .us_v{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px}
 .big{font-size:28px;font-weight:800;font-variant-numeric:tabular-nums}
+.big.err_txt{font-size:20px;color:var(--dng)}
 .mut{font-size:12px;color:var(--mt)}
 .bar_w{margin-bottom:12px}
 .bar_t{position:relative;height:14px;border-radius:999px;background:#e2e8f0;overflow:hidden}

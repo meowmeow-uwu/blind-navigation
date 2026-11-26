@@ -38,7 +38,8 @@ class HCSR04Sensor:
                  max_range_m: float = 4.0,
                  poll_rate_hz: int = 40,
                  emergency_distance_m: float = 1.0,
-                 filter_window: int = 3):
+                 filter_window: int = 3,
+                 allow_simulation: bool = True):
         self.trig_pin = trig_pin
         self.echo_pin = echo_pin
         self.min_range_m = min_range_m
@@ -46,14 +47,16 @@ class HCSR04Sensor:
         self.poll_interval = 1.0 / max(10, min(poll_rate_hz, 100))
         self.emergency_distance_m = emergency_distance_m
         self.filter_window = filter_window
+        self.allow_simulation = allow_simulation
 
         self._running = False
         self._thread: Optional[threading.Thread] = None
         self._lock = threading.Lock()
 
         # Dữ liệu đo mới nhất
-        self._latest_distance_m: Optional[float] = 2.5 if (not HAS_RPI_GPIO) else None
-        self._latest_timestamp: float = time.time()
+        use_sim = (not HAS_RPI_GPIO) and allow_simulation
+        self._latest_distance_m: Optional[float] = 2.5 if use_sim else None
+        self._latest_timestamp: float = 0.0 if not use_sim else time.time()
         self._history = deque(maxlen=filter_window)
         self._is_emergency: bool = False
 
@@ -66,7 +69,9 @@ class HCSR04Sensor:
 
         # Mô phỏng (Simulation)
         self._simulated_distance: float = 2.5
-        self._is_simulated = not HAS_RPI_GPIO
+        self._is_simulated = use_sim
+        self._gpio_ok = False
+        self._error_message = "" if (HAS_RPI_GPIO or allow_simulation) else "Chưa có RPi.GPIO / cảm biến siêu âm"
         self.is_manually_overridden = False
 
         if HAS_RPI_GPIO:
@@ -78,18 +83,29 @@ class HCSR04Sensor:
 
     def _setup_gpio(self):
         try:
+            GPIO.setwarnings(False)
             GPIO.setmode(GPIO.BCM)
             GPIO.setup(self.trig_pin, GPIO.OUT)
             GPIO.setup(self.echo_pin, GPIO.IN)
             GPIO.output(self.trig_pin, GPIO.LOW)
             time.sleep(0.05)
+            self._gpio_ok = True
+            self._error_message = ""
         except Exception as e:
-            logger.error(f"[DISTANCE SENSOR] Lỗi GPIO: {e}. Chuyển sang mô phỏng.")
-            self._is_simulated = True
+            self._gpio_ok = False
+            if self.allow_simulation:
+                logger.error(f"[DISTANCE SENSOR] Lỗi GPIO: {e}. Chuyển sang mô phỏng.")
+                self._is_simulated = True
+            else:
+                logger.error(f"[DISTANCE SENSOR] Lỗi GPIO: {e}. Không chuyển sang mô phỏng.")
+                self._is_simulated = False
+                self._error_message = f"Lỗi GPIO cảm biến siêu âm: {e}"
 
     def _raw_measure(self) -> Optional[float]:
         if self._is_simulated:
             return self._simulated_distance
+        if not self._gpio_ok:
+            return None
 
         try:
             GPIO.output(self.trig_pin, GPIO.HIGH)

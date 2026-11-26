@@ -8,7 +8,11 @@ const Vu_arr=[];
 const Cls_vi={"Person":"Người","Bike":"Xe đạp","Car":"Ô tô","Motorcycle":"Xe máy","Bus":"Xe buýt","Truck":"Xe tải","Stairs":"Cầu thang","Manhole":"Nắp cống","Electrical Pole":"Cột điện","Chair":"Ghế","Bench":"Ghế dài","Traffic Cone":"Nón giao thông","Traffic sign":"Biển báo","Dustbin":"Thùng rác","Dog":"Chó","Tree":"Cây","Guard rail":"Hàng rào","Pedestrian crosswalk":"Vạch qua đường","Fire hydrant":"Trụ cứu hỏa","Teraffic Barrel":"Thùng chắn","Plant Pot":"Chậu cây","Electrical Box":"Bốt điện","Bicycle Rack":"Giá xe đạp","Building":"Tòa nhà","Road":"Lòng đường","vật cản":"Vật cản"};
 const Lan_vi={"left":"Trái","center":"Giữa","right":"Phải"};
 function el(id){return document.getElementById(id);}
-function fmt_n(v,d){return Number.isFinite(Number(v))?Number(v).toFixed(d):"--";}
+function fmt_n(v,d){return (v!==null&&v!==undefined&&Number.isFinite(Number(v)))?Number(v).toFixed(d):"--";}
+function has_val(v){return v!==null&&v!==undefined&&Number.isFinite(Number(v));}
+function has_gps_fix(g){return Boolean(g&&g.connected!==false&&has_val(g.lat)&&has_val(g.lng));}
+function has_us_val(us){return Boolean(us&&us.connected!==false&&has_val(us.distance_m));}
+function has_cam_ok(d){return d.mode!=="edge_live"||(Boolean(d.connected)&&(!d.camera||d.camera.connected!==false));}
 function set_tab(t){
 	St.tab=t;
 	document.querySelectorAll(".tab").forEach((b)=>b.classList.toggle("act",b.dataset.tab===t));
@@ -65,47 +69,72 @@ function con_tel(){
 	};
 }
 function upd_ui(d,logs){
+	const is_live=d.mode==="edge_live";
+	const is_conn=Boolean(d.connected);
+	const cam_ok=has_cam_ok(d);
+	const g_ok=has_gps_fix(d.gps);
+	const u_ok=has_us_val(d.ultrasonic);
 	const emg=Boolean(d.emergency);
-	const mod=d.mode==="edge_live"?"THIẾT BỊ THẬT":"MÔ PHỎNG";
+	const mod=is_live?(is_conn?"THIẾT BỊ THẬT":"CHƯA KẾT NỐI PI"):"MÔ PHỎNG";
 	el("v_mod").textContent=mod;
-	el("c_mdl").textContent=((d.model&&d.model.name)||"yolov26n").toUpperCase()+" "+((d.model&&d.model.imgsz)||320);
-	el("c_fps").textContent=fmt_n(d.system&&d.system.fps,1)+" FPS";
-	el("h_bat").textContent=fmt_n(d.system&&d.system.battery_pct,0)+"%";
-	el("h_tmp").textContent=fmt_n(d.system&&d.system.cpu_temp_c,1)+"°C";
-	el("k_bat").textContent=fmt_n(d.system&&d.system.battery_pct,0)+"%";
-	el("k_tmp").textContent=fmt_n(d.system&&d.system.cpu_temp_c,1)+"°C";
-	el("k_spd").textContent=fmt_n(d.gps&&d.gps.speed_mps,2)+" m/s";
-	el("k_sat").textContent=String((d.gps&&d.gps.satellites)||0)+" vệ tinh";
+	el("v_dot").className="dot"+(cam_ok?"":" err");
+	if(!cam_ok){
+		el("v_err").textContent=(d.camera&&d.camera.error)||(is_conn?"Camera chưa kết nối":"Chưa kết nối Raspberry Pi");
+		el("v_err").classList.remove("hid");
+	}else{
+		el("v_err").classList.add("hid");
+	}
+	el("c_mdl").textContent=((d.model&&d.model.name)||"yolov8n").toUpperCase()+" "+((d.model&&d.model.imgsz)||320);
+	el("c_fps").textContent=cam_ok?(fmt_n(d.system&&d.system.fps,1)+" FPS"):"-- FPS";
+	const bat=d.system?d.system.battery_pct:null;
+	const tmp=d.system?d.system.cpu_temp_c:null;
+	el("h_bat").textContent=has_val(bat)?(fmt_n(bat,0)+"%"):"Chưa có";
+	el("h_tmp").textContent=has_val(tmp)?(fmt_n(tmp,1)+"°C"):"Chưa có";
+	el("k_bat").textContent=has_val(bat)?(fmt_n(bat,0)+"%"):"Chưa có";
+	el("k_tmp").textContent=has_val(tmp)?(fmt_n(tmp,1)+"°C"):"Chưa có";
+	el("k_spd").textContent=(g_ok&&has_val(d.gps&&d.gps.speed_mps))?(fmt_n(d.gps.speed_mps,2)+" m/s"):"Chưa có GPS";
+	el("k_sat").textContent=g_ok?(String((d.gps&&d.gps.satellites)||0)+" vệ tinh"):"Chưa có GPS";
 	el("v_alr").classList.toggle("hid",!emg);
-	el("b_emg").classList.toggle("hid",!emg && !d.geofence_breach);
+	el("b_emg").classList.toggle("hid",!emg && !(d.geofence_breach && g_ok));
 	if(emg){
 		el("b_con").textContent="KHẨN CẤP";
 		el("b_con").className="pil emg";
-		el("t_emg").textContent="CẢNH BÁO KHẨN CẤP: Vật cản ở "+fmt_n(d.ultrasonic&&d.ultrasonic.distance_m,2)+" m";
-	}else if(d.geofence_breach){
+		el("t_emg").textContent=u_ok?("CẢNH BÁO KHẨN CẤP: Vật cản ở "+fmt_n(d.ultrasonic.distance_m,2)+" m"):"CẢNH BÁO KHẨN CẤP";
+	}else if(d.geofence_breach && g_ok){
 		el("b_con").textContent="NGOÀI VÙNG";
 		el("b_con").className="pil wrn";
 		el("t_emg").textContent="CẢNH BÁO GPS: Người dùng ra khỏi vùng an toàn ("+fmt_n(d.gps&&d.gps.home_distance_m,0)+" m)";
 	}else{
-		el("b_con").textContent=d.mode==="edge_live"?(d.connected?"Pi Trực tuyến":"Chờ Pi 4"):"Đang mô phỏng";
-		el("b_con").className="pil "+(d.mode==="edge_live"&&!d.connected?"wrn":"ok");
+		el("b_con").textContent=is_live?(is_conn?"Pi Trực tuyến":"Chưa kết nối Pi"):"Đang mô phỏng";
+		el("b_con").className="pil "+(is_live&&!is_conn?"wrn":"ok");
 	}
 	upd_us(d.ultrasonic||{});
-	upd_obs(d.obstacles||[]);
+	upd_obs(d.obstacles||[],d);
 	upd_log(logs);
 	upd_gps(d);
 	if(!St.ptt && d.system) upd_vu(d.system.ptt_active?d.system.ptt_level:0);
 }
 function upd_us(us){
-	const dst=Number(us.distance_m||0);
-	const emg=Number(us.emergency_distance_m||1.0);
+	const emg=Number((us&&us.emergency_distance_m)||1.0);
+	el("u_ang").textContent=fmt_n(us&&us.beam_angle_deg,0)+"°";
+	el("u_thr").textContent=fmt_n(emg,1)+"m";
+	el("u_mrk").style.left=Math.min(100,(emg/4.0)*100)+"%";
+	if(!has_us_val(us)){
+		el("h_us").textContent="Chưa có";
+		el("u_dst").textContent="Chưa kết nối";
+		el("u_dst").className="big err_txt";
+		el("u_bar").style.width="0%";
+		el("u_bar").style.background="#94a3b8";
+		el("u_tag").textContent=(us&&us.error)||"Chưa kết nối";
+		el("u_tag").className="tag dng";
+		return;
+	}
+	const dst=Number(us.distance_m);
 	const pct=Math.min(100,Math.max(0,(dst/4.0)*100));
 	el("h_us").textContent=fmt_n(dst,2)+" m";
 	el("u_dst").textContent=fmt_n(dst,2)+" m";
-	el("u_ang").textContent=fmt_n(us.beam_angle_deg,0)+"°";
-	el("u_thr").textContent=fmt_n(emg,1)+"m";
+	el("u_dst").className="big";
 	el("u_bar").style.width=pct+"%";
-	el("u_mrk").style.left=Math.min(100,(emg/4.0)*100)+"%";
 	if(dst<emg){
 		el("u_bar").style.background="var(--dng)";
 		el("u_tag").textContent="Khẩn cấp";
@@ -120,16 +149,21 @@ function upd_us(us){
 		el("u_tag").className="tag ok";
 	}
 }
-function upd_obs(lst){
+function upd_obs(lst,d){
 	Obs_arr.length=0;
 	for(let i=0;i<lst.length;++i) Obs_arr.push(lst[i]);
 	el("o_cnt").textContent=String(Obs_arr.length);
 	el("o_cnt2").textContent=String(Obs_arr.length);
+	let empty_msg="Chưa phát hiện vật cản gần";
+	if(d && d.mode==="edge_live"){
+		if(!d.connected) empty_msg="Chưa kết nối Raspberry Pi";
+		else if(!has_cam_ok(d)) empty_msg="Camera chưa kết nối — chưa thể nhận diện vật cản";
+	}
 	const htm=Obs_arr.length?Obs_arr.map((o)=>{
 		const nm=Cls_vi[o.class_name]||o.class_name;
 		const ln=Lan_vi[o.lane]||o.lane;
 		return `<div class="obs_i ${o.is_emergency?"emg":""}"><div><strong>#${o.track_id} ${nm}</strong> · ${ln}</div><div><strong>${fmt_n(o.distance_m,2)}m</strong> · R:${fmt_n(o.risk_score,2)}</div></div>`;
-	}).join(""):'<div class="mut">Chưa phát hiện vật cản gần</div>';
+	}).join(""):`<div class="mut">${empty_msg}</div>`;
 	el("l_obs").innerHTML=htm;
 	el("l_obs2").innerHTML=htm;
 }
@@ -187,15 +221,37 @@ function fov_pts(lat,lng,hdg,dst){
 }
 function upd_gps(d){
 	const g=d.gps||{};
-	const lat=Number(g.lat||16.0738);
-	const lng=Number(g.lng||108.1499);
+	if(!has_gps_fix(g)){
+		const err_txt=(g&&g.error)||"Chưa có GPS";
+		el("m_crd").textContent=`GPS: ${err_txt}`;
+		el("g_lat").textContent="Chưa có";
+		el("g_lng").textContent="Chưa có";
+		el("g_hdg").textContent="--";
+		el("g_spd").textContent="--";
+		el("g_hom").textContent="--";
+		el("g_sat").textContent=err_txt;
+		el("g_tag").textContent=err_txt;
+		el("g_tag").className="tag dng";
+		el("m_gfs").textContent="Chưa có GPS — chưa gắn module GPS hoặc chưa bắt được vệ tinh";
+		if(St.osm && Map_ref.osm){
+			Map_ref.usr.setStyle({opacity:0,fillOpacity:0});
+			Map_ref.trl.setLatLngs([]);
+			Map_ref.con.setLatLngs([]);
+			Map_ref.obs.clearLayers();
+		}
+		drw_rad(el("c_min"),d,true);
+		if(St.tab==="map" && !(St.osm && Map_ref.osm)) drw_rad(el("m_cvs"),d,false);
+		return;
+	}
+	const lat=Number(g.lat);
+	const lng=Number(g.lng);
 	const hdg=Number(g.heading_deg||0);
 	el("m_crd").textContent=`GPS: ${fmt_n(lat,6)}, ${fmt_n(lng,6)} | Hướng ${fmt_n(hdg,0)}°`;
 	el("g_lat").textContent=fmt_n(lat,6);
 	el("g_lng").textContent=fmt_n(lng,6);
 	el("g_hdg").textContent=fmt_n(hdg,0)+"°";
-	el("g_spd").textContent=fmt_n(Number(g.speed_mps||0)*3.6,1)+" km/h";
-	el("g_hom").textContent=fmt_n(g.home_distance_m,0)+" m";
+	el("g_spd").textContent=has_val(g.speed_mps)?(fmt_n(Number(g.speed_mps)*3.6,1)+" km/h"):"--";
+	el("g_hom").textContent=has_val(g.home_distance_m)?(fmt_n(g.home_distance_m,0)+" m"):"--";
 	el("g_sat").textContent=`${g.satellites||0} / ${fmt_n(g.hdop,1)}`;
 	el("g_tag").textContent=d.geofence_breach?"Ngoài vùng":"GPS OK";
 	el("g_tag").className="tag "+(d.geofence_breach?"dng":"ok");
@@ -203,6 +259,7 @@ function upd_gps(d){
 	drw_rad(el("c_min"),d,true);
 	if(St.tab==="map"){
 		if(St.osm && Map_ref.osm){
+			Map_ref.usr.setStyle({opacity:1,fillOpacity:1});
 			upd_osm(d,lat,lng,hdg);
 		}else{
 			drw_rad(el("m_cvs"),d,false);
@@ -259,7 +316,7 @@ function drw_rad(cvs,d,min_m){
 	ctx.arc(cx,cy,max_r,ang_c-0.26,ang_c+0.26);
 	ctx.closePath();
 	ctx.fill();
-	if(!min_m && d.gps && Array.isArray(d.gps.trail) && d.gps.trail.length>1){
+	if(!min_m && has_gps_fix(d.gps) && Array.isArray(d.gps.trail) && d.gps.trail.length>1){
 		const lat0=Number(d.gps.lat);
 		const lng0=Number(d.gps.lng);
 		const scl=max_r/35;
@@ -299,12 +356,21 @@ function drw_rad(cvs,d,min_m){
 	ctx.strokeStyle="#ffffff";
 	ctx.lineWidth=2;
 	ctx.stroke();
+	if(d && d.mode==="edge_live" && !d.connected){
+		ctx.fillStyle="#f87171";
+		ctx.font="bold 12px sans-serif";
+		ctx.fillText("Chưa kết nối Raspberry Pi",12,20);
+	}else if(d && d.mode==="edge_live" && !has_us_val(d.ultrasonic) && Obs_arr.length===0){
+		ctx.fillStyle="#fbbf24";
+		ctx.font="bold 12px sans-serif";
+		ctx.fillText("Chưa kết nối cảm biến siêu âm",12,20);
+	}
 }
 function tog_loc(){
 	St.loc=!St.loc;
 	el("b_loc").textContent=St.loc?"Khóa tâm: BẬT":"Khóa tâm: TẮT";
 	el("b_loc").classList.toggle("pri",St.loc);
-	if(St.loc && St.tel && St.tel.gps && Map_ref.osm) Map_ref.osm.panTo([St.tel.gps.lat,St.tel.gps.lng]);
+	if(St.loc && St.tel && has_gps_fix(St.tel.gps) && Map_ref.osm) Map_ref.osm.panTo([St.tel.gps.lat,St.tel.gps.lng]);
 }
 function tog_map(){
 	if(typeof L==="undefined") return;
@@ -316,7 +382,10 @@ function tog_map(){
 	else if(St.tel) drw_rad(el("m_cvs"),St.tel,false);
 }
 async function set_hom(){
-	if(!St.tel || !St.tel.gps) return;
+	if(!St.tel || !has_gps_fix(St.tel.gps)){
+		el("m_gfs").textContent="Chưa có GPS nên không thể đặt làm tâm an toàn";
+		return;
+	}
 	const res=await fetch("/api/config",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({gps:{home_lat:St.tel.gps.lat,home_lng:St.tel.gps.lng}})});
 	if(res.ok){
 		const dat=await res.json();

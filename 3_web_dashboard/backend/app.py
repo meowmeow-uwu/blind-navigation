@@ -9,8 +9,8 @@ from fastapi import FastAPI,HTTPException,Request,WebSocket,WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse,Response,StreamingResponse
 from fastapi.staticfiles import StaticFiles
-from backend.cfg import load_cfg,rst_cfg,save_cfg
-from backend.edge import Pi_ws,add_pcm,beg_pcm,end_pcm,fwd_cmd,fwd_pcm,get_edg,get_efm,get_wav,pub_mq,pull_edg,pull_frm,set_efm,start_mq,stop_mq,upd_edg
+from backend.cfg import Cur_cfg,load_cfg,rst_cfg,save_cfg
+from backend.edge import Pi_ws,add_pcm,beg_pcm,end_pcm,fwd_cmd,fwd_pcm,get_edg,get_efm,get_wav,pub_mq,pull_edg,pull_frm,push_tts,set_efm,start_mq,stop_mq,stream_frm,upd_edg
 from backend.sim import get_jpg,set_ptt,set_scn,step_sim
 Base_dir=Path(__file__).resolve().parents[1]
 Front_dir=Base_dir/"frontend"
@@ -25,9 +25,10 @@ def add_log(lvl:str,src:str,msg:str)->None:
 		Logs.pop()
 def mk_off()->bytes:
 	frm=np.zeros((480,640,3),dtype=np.uint8)
-	frm[:]=(24,32,44)
-	cv2.putText(frm,"DANG CHO TIN HIEU CAMERA TU RASPBERRY PI 4...",(58,230),cv2.FONT_HERSHEY_SIMPLEX,0.62,(220,230,240),2)
-	cv2.putText(frm,"Kiem tra ket noi Edge hoac chuyen ve che do Mo phong",(72,268),cv2.FONT_HERSHEY_SIMPLEX,0.5,(150,165,185),1)
+	frm[:]=(22,26,36)
+	cv2.rectangle(frm,(18,18),(622,462),(0,0,200),2)
+	cv2.putText(frm,"CAMERA CHUA KET NOI",(135,215),cv2.FONT_HERSHEY_SIMPLEX,1.0,(90,110,255),2)
+	cv2.putText(frm,"Chua nhan duoc tin hieu tu Raspberry Pi (port 8080)",(88,258),cv2.FONT_HERSHEY_SIMPLEX,0.52,(190,205,225),1)
 	ok,buf=cv2.imencode(".jpg",frm,[int(cv2.IMWRITE_JPEG_QUALITY),75])
 	return buf.tobytes() if ok else b""
 Off_jpg=mk_off()
@@ -56,14 +57,16 @@ async def run_tel()->None:
 		now=time.time()
 		emg=bool(st.get("emergency"))
 		if(emg and not Run_flg["emg"] and now-Run_flg["emg_ts"]>2.5):
-			d=st.get("ultrasonic",{}).get("distance_m",0.0)
-			add_log("emergency","Siêu âm / AI",f"Cảnh báo khẩn cấp! Vật cản ở khoảng cách {d:.2f} m")
+			d=st.get("ultrasonic",{}).get("distance_m")
+			d_txt=f"{float(d):.2f} m" if d is not None else "chưa rõ cự ly"
+			add_log("emergency","Siêu âm / AI",f"Cảnh báo khẩn cấp! Vật cản ở khoảng cách {d_txt}")
 			Run_flg["emg_ts"]=now
 		Run_flg["emg"]=emg
 		gf=bool(st.get("geofence_breach"))
 		if(gf and not Run_flg["gf"] and now-Run_flg["gf_ts"]>5.0):
-			hd=st.get("gps",{}).get("home_distance_m",0.0)
-			add_log("warning","GPS",f"Người dùng đã đi ra ngoài vùng an toàn ({hd:.0f} m)")
+			hd=st.get("gps",{}).get("home_distance_m")
+			hd_txt=f"{float(hd):.0f} m" if hd is not None else "--"
+			add_log("warning","GPS",f"Người dùng đã đi ra ngoài vùng an toàn ({hd_txt})")
 			Run_flg["gf_ts"]=now
 		Run_flg["gf"]=gf
 		if(Tel_ws): await bcast_st(st)
@@ -73,7 +76,12 @@ async def run_tel()->None:
 async def life(_app:FastAPI):
 	cfg=load_cfg()
 	Run_flg["on"]=True
-	step_sim(cfg)
+	if(cfg.get("system",{}).get("mode","simulation")=="edge_live"):
+		Cur_st.clear()
+		Cur_st.update(get_edg(cfg))
+	else:
+		Cur_st.clear()
+		Cur_st.update(step_sim(cfg))
 	add_log("info","Hệ thống","Bảng điều khiển người thân BlindNav Care đã sẵn sàng")
 	start_mq(cfg)
 	tsk=asyncio.create_task(run_tel())
@@ -97,7 +105,10 @@ async def health():
 async def get_st():
 	if(not Cur_st):
 		cfg=load_cfg()
-		Cur_st.update(step_sim(cfg))
+		if(cfg.get("system",{}).get("mode","simulation")=="edge_live"):
+			Cur_st.update(get_edg(cfg))
+		else:
+			Cur_st.update(step_sim(cfg))
 	return {"telemetry":dict(Cur_st),"logs":Logs[:30]}
 @app.get("/api/config")
 async def get_cfg():
@@ -134,6 +145,8 @@ async def post_tts(req:Request):
 	if(not txt): raise HTTPException(status_code=400,detail="Empty text")
 	set_ptt(False,0.0,txt)
 	await fwd_cmd({"type":"tts","text":txt})
+	cfg=Cur_cfg if Cur_cfg else load_cfg()
+	if(not Pi_ws and cfg.get("system",{}).get("mode")=="edge_live"): await push_tts(cfg,txt)
 	pub_mq("blindnav/tts",{"text":txt})
 	add_log("voice","Loa thiết bị",f"Đã gửi lời nhắc thoại: \"{txt}\"")
 	return {"ok":True,"text":txt}
@@ -180,20 +193,34 @@ def cur_jpg()->bytes:
 	return jpg if jpg else Off_jpg
 @app.get("/api/snapshot.jpg")
 async def snap_jpg():
+	cfg=load_cfg()
+	if(cfg.get("system",{}).get("mode")=="edge_live"):
+		jpg=get_efm() or await pull_frm(cfg) or Off_jpg
+		return Response(content=jpg,media_type="image/jpeg",headers={"Cache-Control":"no-store"})
 	return Response(content=cur_jpg(),media_type="image/jpeg",headers={"Cache-Control":"no-store"})
 @app.get("/api/video_feed")
 async def vid_mjp():
 	async def gen():
 		while(True):
-			cfg=load_cfg()
+			cfg=Cur_cfg if Cur_cfg else load_cfg()
 			if(cfg.get("system",{}).get("mode")=="edge_live"):
 				jpg=get_efm()
-				if(not jpg): jpg=await pull_frm(cfg)
-				if(not jpg): jpg=Off_jpg
+				if(jpg):
+					yield b"--frame\r\nContent-Type: image/jpeg\r\n\r\n"+jpg+b"\r\n"
+					await asyncio.sleep(0.08)
+					continue
+				got=False
+				async for frm_b in stream_frm(cfg):
+					got=True
+					yield b"--frame\r\nContent-Type: image/jpeg\r\n\r\n"+frm_b+b"\r\n"
+					if((Cur_cfg or cfg).get("system",{}).get("mode")!="edge_live" or get_efm()): break
+				if(not got):
+					yield b"--frame\r\nContent-Type: image/jpeg\r\n\r\n"+Off_jpg+b"\r\n"
+					await asyncio.sleep(0.5)
 			else:
 				jpg=cur_jpg()
-			if(jpg): yield b"--frame\r\nContent-Type: image/jpeg\r\n\r\n"+jpg+b"\r\n"
-			await asyncio.sleep(0.08)
+				if(jpg): yield b"--frame\r\nContent-Type: image/jpeg\r\n\r\n"+jpg+b"\r\n"
+				await asyncio.sleep(0.08)
 	return StreamingResponse(gen(),media_type="multipart/x-mixed-replace; boundary=frame",headers={"Cache-Control":"no-store, no-cache, must-revalidate"})
 @app.websocket("/ws/tel")
 async def ws_tel(ws:WebSocket):
@@ -241,6 +268,8 @@ async def ws_ptt(ws:WebSocket):
 					txt=str(obj["text"]).strip()
 					set_ptt(False,0.0,txt)
 					await fwd_cmd({"type":"tts","text":txt})
+					cfg=Cur_cfg if Cur_cfg else load_cfg()
+					if(not Pi_ws and cfg.get("system",{}).get("mode")=="edge_live"): await push_tts(cfg,txt)
 					add_log("voice","Loa thiết bị",f"Đã gửi lời nhắc thoại: \"{txt}\"")
 			elif("bytes" in pkt and pkt["bytes"] is not None):
 				raw=pkt["bytes"]
@@ -263,6 +292,8 @@ async def ws_edg(ws:WebSocket):
 	await ws.accept()
 	Pi_ws.add(ws)
 	try:
+		cfg=Cur_cfg if Cur_cfg else load_cfg()
+		await ws.send_text(json.dumps({"type":"config","data":cfg},ensure_ascii=False))
 		while(True):
 			await ws.receive_text()
 	except WebSocketDisconnect:

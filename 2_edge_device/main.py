@@ -32,6 +32,7 @@ from modules.sensors.ultrasonic_hcsr04 import HCSR04Sensor
 from modules.tracking.byte_tracker import LightweightTracker
 from core.fusion_engine import SensorFusionEngine
 from modules.audio.audio_manager import AudioManager
+from modules.audio.dashboard_audio_client import DashboardAudioClient
 from modules.vision_local.synthetic_camera import SyntheticCamera
 from modules.vision_local.freshest_camera import FreshestCameraReader
 
@@ -70,6 +71,63 @@ def init_detector():
         def detect(self, _):
             return []
     return SimpleMockDetector()
+
+
+def read_cpu_temp():
+    """Đọc nhiệt độ CPU Raspberry Pi từ thermal_zone0 (độ C)."""
+    try:
+        with open("/sys/class/thermal/thermal_zone0/temp", "r", encoding="utf-8") as f:
+            return round(float(f.read().strip()) / 1000.0, 1)
+    except Exception:
+        return None
+
+
+def make_error_frame(title: str, subtitle: str = "", us_dist=None) -> np.ndarray:
+    """Tạo khung hình báo lỗi rõ ràng khi chưa có camera vật lý (không dùng mô phỏng)."""
+    frame = np.zeros((480, 640, 3), dtype=np.uint8)
+    frame[:] = (22, 26, 36)
+    if HAS_CV2:
+        cv2.rectangle(frame, (18, 18), (622, 462), (0, 0, 200), 2)
+        cv2.putText(frame, title, (70, 220), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (90, 110, 255), 2)
+        if subtitle:
+            cv2.putText(frame, subtitle, (70, 262), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (190, 205, 225), 1)
+        us_str = f"{us_dist:.2f}m" if us_dist is not None else "Chua ket noi"
+        cv2.putText(frame, f"Sieu am: {us_str}", (70, 310), cv2.FONT_HERSHEY_SIMPLEX, 0.52, (160, 220, 255), 1)
+    return frame
+
+
+def open_physical_camera(source_arg: str):
+    """Mở camera vật lý theo index hoặc quét các cổng 0..6; trả về (cap, fresh_cap) hoặc (None, None)."""
+    if not HAS_CV2:
+        return None, None
+    if source_arg == "0" and not os.path.exists("/dev/video0"):
+        cam_indices = [1, 2, 3, 4, 5, 6]
+    elif source_arg.isdigit():
+        cam_indices = [int(source_arg)]
+    else:
+        cam_indices = [0, 1, 2, 3, 4, 5, 6]
+    backend = cv2.CAP_V4L2 if hasattr(cv2, 'CAP_V4L2') else cv2.CAP_ANY
+    for c_idx in cam_indices:
+        if not os.path.exists(f"/dev/video{c_idx}"):
+            continue
+        try:
+            c_test = cv2.VideoCapture(c_idx, backend)
+            if c_test.isOpened():
+                try:
+                    c_test.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
+                except Exception:
+                    pass
+                c_test.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+                c_test.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+                c_test.set(cv2.CAP_PROP_FPS, 30)
+                ret_check, test_f = c_test.read()
+                if ret_check and test_f is not None:
+                    print(f"[CAMERA] ✅ Mở thành công Camera vật lý tại cổng index: {c_idx} (Độ trễ tối thiểu)")
+                    return c_test, FreshestCameraReader(c_test)
+                c_test.release()
+        except Exception:
+            pass
+    return None, None
 
 
 def draw_hud(frame: np.ndarray, fused_results: list, us_dist: float, is_emergency: bool, fps: float) -> np.ndarray:
@@ -133,6 +191,8 @@ def main():
     parser.add_argument("--headless", action="store_true", help="Chạy không cửa sổ GUI màn hình")
     parser.add_argument("--mute-local", action="store_true",
                         help="Tắt loa cục bộ trên Pi, chỉ phát âm thanh qua Web Dashboard trên máy tính Mac")
+    parser.add_argument("--dashboard-url", type=str, default="http://127.0.0.1:8088",
+                        help="URL Web Dashboard để nhận TTS/đàm thoại PTT (mặc định: http://127.0.0.1:8088)")
     args = parser.parse_args()
 
     print("=" * 68)
@@ -154,59 +214,62 @@ def main():
 
     # 2. Khởi tạo Audio Manager (Chống đè tiếng & Phân tầng phản hồi - Yêu cầu 5)
     audio = AudioManager(port=args.port, guidance_cooldown_s=2.5, enable_local_audio=not args.mute_local)
+    dash_url = config.get("dashboard", {}).get("url", args.dashboard_url)
+    audio_bridge = DashboardAudioClient(dash_url, audio)
+    audio_bridge.start()
 
     # 3. Khởi tạo Cảm biến siêu âm HC-SR04 đa luồng (Yêu cầu 1: Bất đồng bộ 40Hz)
+    is_demo = (args.source.lower() in ["demo", "synthetic"])
     us_cfg = config.get("ultrasonic", {})
     sensor = HCSR04Sensor(
         trig_pin=us_cfg.get("trig_pin", 23),
         echo_pin=us_cfg.get("echo_pin", 24),
         poll_rate_hz=us_cfg.get("poll_rate_hz", 40),
-        emergency_distance_m=us_cfg.get("emergency_distance_m", 1.0)
+        emergency_distance_m=us_cfg.get("emergency_distance_m", 1.0),
+        allow_simulation=is_demo
     )
     # Callback khẩn cấp tức thời (<30ms) trực tiếp từ luồng siêu âm, không chờ AI
     sensor.set_emergency_callback(lambda d: audio.trigger_emergency(d))
     sensor.start()
-    audio.set_distance_callback(sensor.set_simulated_distance)
+    if is_demo:
+        audio.set_distance_callback(sensor.set_simulated_distance)
 
-    # 4. Khởi tạo Nguồn Video (Tự động quét các cổng 0, 1, 2, 3...)
+    # 4. Khởi tạo Nguồn Video (Chỉ dùng mô phỏng 3D khi truyền --source demo/synthetic)
     cap = None
     fresh_cap = None
     synth_cam = None
-    use_synthetic = (args.source.lower() in ["demo", "synthetic"])
+    use_synthetic = is_demo
+    camera_connected = False
+    camera_error = ""
+    last_cam_retry = 0.0
+    cam_read_failures = 0
 
-    if not use_synthetic and HAS_CV2:
-        cam_indices = [int(args.source)] if args.source.isdigit() else [0, 1, 2, 3, 4]
-        for c_idx in cam_indices:
-            try:
-                backend = cv2.CAP_V4L2 if hasattr(cv2, 'CAP_V4L2') else cv2.CAP_ANY
-                c_test = cv2.VideoCapture(c_idx, backend)
-                if c_test.isOpened():
-                    c_test.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-                    c_test.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-                    ret_check, test_f = c_test.read()
-                    if ret_check and test_f is not None:
-                        cap = c_test
-                        fresh_cap = FreshestCameraReader(cap)
-                        print(f"[CAMERA] ✅ Mở thành công Camera vật lý tại cổng index: {c_idx} (Độ trễ tối thiểu)")
-                        break
-                    c_test.release()
-            except Exception:
-                pass
-
-        if cap is None:
-            print("[CAMERA] ⚠️ Không tìm thấy camera vật lý hoạt động -> Tự động chuyển sang Camera Mô Phỏng 3D.")
-            use_synthetic = True
-            synth_cam = SyntheticCamera()
+    if not use_synthetic:
+        if HAS_CV2:
+            cap, fresh_cap = open_physical_camera(args.source)
+            if fresh_cap is not None:
+                camera_connected = True
+            else:
+                camera_error = "Camera chưa kết nối"
+                print("[CAMERA] ❌ Camera chưa kết nối! Hiển thị trạng thái lỗi (không chuyển sang mô phỏng).")
+        else:
+            camera_error = "Thiếu thư viện OpenCV (cv2)"
+            print("[CAMERA] ❌ Thiếu thư viện OpenCV (cv2).")
     else:
-        use_synthetic = True
         synth_cam = SyntheticCamera()
+        camera_connected = True
 
     print(f"\n👉 Mở trình duyệt xem trực tiếp: http://localhost:{audio.port}")
-    print("👉 Phím test cự ly: [1] 3.0m (An toàn)  [2] 2.0m (Dẫn hướng)  [3] 0.5m (Khẩn cấp)  [Q] Thoát\n")
+    if is_demo:
+        print("👉 Phím test cự ly: [1] 3.0m (An toàn)  [2] 2.0m (Dẫn hướng)  [3] 0.5m (Khẩn cấp)  [Q] Thoát\n")
+    else:
+        print("👉 Chế độ phần cứng thật: tự động báo lỗi rõ ràng nếu thiếu camera / siêu âm / GPS. Nhấn [Q] để thoát.\n")
 
     fps = 0.0
     has_display = bool(os.environ.get("DISPLAY")) or (sys.platform == "darwin")
     debug_view = (not args.headless) and HAS_CV2 and has_display
+    dev_name = config.get("system", {}).get("device_name", "raspi")
+    emg_thresh = float(us_cfg.get("emergency_distance_m", 1.0))
 
     try:
         while True:
@@ -214,31 +277,70 @@ def main():
 
             # Lấy khung hình tươi mới nhất (Zero Latency)
             sim_dets = []
+            frame = None
             if use_synthetic and synth_cam:
                 _, frame, sim_dets, sim_d = synth_cam.read()
+                camera_connected = True
+                camera_error = ""
                 if sensor.is_simulated and not sensor.is_manually_overridden:
                     sensor.set_simulated_distance(sim_d, manual=False)
-            elif fresh_cap and fresh_cap.isOpened():
-                ret, frame = fresh_cap.read()
-                if not ret or frame is None:
-                    time.sleep(0.01)
-                    continue
             else:
-                frame = np.zeros((480, 640, 3), dtype=np.uint8)
+                if fresh_cap and fresh_cap.isOpened():
+                    ret, frame = fresh_cap.read()
+                    if ret and frame is not None:
+                        camera_connected = True
+                        camera_error = ""
+                        cam_read_failures = 0
+                    else:
+                        cam_read_failures += 1
+                        if (not fresh_cap.isOpened()) or cam_read_failures >= 2:
+                            print("[CAMERA] ❌ Mất tín hiệu / đơ camera vật lý, đang giải phóng để kết nối lại...")
+                            fresh_cap.release()
+                            fresh_cap = None
+                            cap = None
+                            camera_connected = False
+                            camera_error = "Camera chưa kết nối"
+                            last_cam_retry = time.time() - 1.5
+                        else:
+                            time.sleep(0.01)
+                            continue
+                else:
+                    camera_connected = False
+                    camera_error = "Camera chưa kết nối" if HAS_CV2 else "Thiếu thư viện OpenCV (cv2)"
+                    now_retry = time.time()
+                    if HAS_CV2 and (now_retry - last_cam_retry >= 2.5):
+                        last_cam_retry = now_retry
+                        cap, fresh_cap = open_physical_camera(args.source)
+                        if fresh_cap is not None:
+                            camera_connected = True
+                            camera_error = ""
+                            cam_read_failures = 0
+                            ret, frame = fresh_cap.read()
+                            if not ret or frame is None:
+                                camera_connected = False
+                                camera_error = "Camera chưa đọc được khung hình"
 
             # Đọc khoảng cách siêu âm mới nhất
             raw_d, _, is_sensor_emergency = sensor.get_latest_reading()
+            us_connected = (raw_d is not None)
+            us_error = "" if us_connected else getattr(sensor, "_error_message", "") or "Chưa kết nối cảm biến siêu âm"
 
             # Nhận diện vật thể & Bám vết (Yêu cầu 3: ByteTrack)
-            detections = sim_dets if use_synthetic else detector.detect(frame)
-            tracked_items = tracker.update(detections)
+            if use_synthetic:
+                detections = sim_dets
+            elif camera_connected and frame is not None:
+                detections = detector.detect(frame)
+            else:
+                detections = []
+            tracked_items = tracker.update(detections) if detections or tracker.tracks else []
 
             # Hợp nhất cảm biến siêu âm & Xếp hạng nguy cơ (Yêu cầu 2 & 4)
             fused_results, global_emergency = fusion_engine.fuse(tracked_items, raw_d)
 
             # Điều phối phản hồi thích ứng đa giác quan (Yêu cầu 5)
-            if global_emergency or is_sensor_emergency or (raw_d is not None and raw_d < 1.0):
-                audio.trigger_emergency(raw_d or 0.8)
+            is_any_emergency = global_emergency or is_sensor_emergency or (raw_d is not None and raw_d < emg_thresh)
+            if is_any_emergency:
+                audio.trigger_emergency(raw_d if raw_d is not None else 0.8)
             else:
                 audio.clear_emergency()
                 # Nếu có vật cản và nằm trong khoảng dẫn hướng (1.0m - 3.0m)
@@ -253,32 +355,91 @@ def main():
                                     trk.mark_announced(obs.distance_m)
                                 break  # Chỉ phát âm thanh cho 1 vật cản ưu tiên nhất
 
-            # Tính FPS và vẽ HUD
+            # Tính FPS và vẽ HUD hoặc màn hình báo lỗi camera
             t_elapsed = time.perf_counter() - t_start
             fps = 0.9 * fps + 0.1 * (1.0 / max(1e-4, t_elapsed))
 
-            vis_frame = draw_hud(
-                frame=frame,
-                fused_results=fused_results,
-                us_dist=raw_d,
-                is_emergency=global_emergency or is_sensor_emergency,
-                fps=fps
-            )
+            if camera_connected and frame is not None:
+                vis_frame = draw_hud(
+                    frame=frame,
+                    fused_results=fused_results,
+                    us_dist=raw_d,
+                    is_emergency=is_any_emergency,
+                    fps=fps
+                )
+            else:
+                vis_frame = make_error_frame(
+                    "CAMERA CHUA KET NOI",
+                    "Kiem tra cam USB Webcam / cap CSI tren Raspberry Pi",
+                    us_dist=raw_d
+                )
             audio.update_frame(vis_frame)
 
-            # Hiển thị cửa sổ Desktop và nhận phím bấm mô phỏng
+            # Cập nhật telemetry thực tế cho Web Dashboard (/telemetry)
+            us_status = "disconnected" if not us_connected else ("emergency" if raw_d < emg_thresh else ("caution" if raw_d < 2.2 else "safe"))
+            obs_payload = [
+                {
+                    "track_id": o.track_id,
+                    "class_name": o.class_name,
+                    "confidence": round(float(o.confidence), 2),
+                    "bbox": list(o.bbox),
+                    "distance_m": round(float(o.distance_m), 2),
+                    "lane": o.lane,
+                    "risk_score": round(float(o.risk_score), 2),
+                    "ttc_seconds": round(float(o.ttc_seconds), 1),
+                    "is_ultrasonic_target": bool(getattr(o, "is_ultrasonic_target", False)),
+                    "is_emergency": bool(o.is_emergency),
+                }
+                for o in fused_results[:12]
+            ]
+            audio.update_telemetry({
+                "device_name": dev_name,
+                "emergency": bool(is_any_emergency),
+                "camera": {
+                    "connected": bool(camera_connected),
+                    "error": camera_error,
+                },
+                "ultrasonic": {
+                    "connected": bool(us_connected),
+                    "distance_m": round(float(raw_d), 2) if raw_d is not None else None,
+                    "beam_angle_deg": float(us_cfg.get("beam_angle_deg", 30.0)),
+                    "emergency_distance_m": emg_thresh,
+                    "status": us_status,
+                    "error": us_error,
+                },
+                "gps": {
+                    "connected": False,
+                    "lat": None,
+                    "lng": None,
+                    "heading_deg": None,
+                    "speed_mps": None,
+                    "satellites": 0,
+                    "hdop": None,
+                    "home_distance_m": None,
+                    "trail": [],
+                    "error": "Chưa có GPS",
+                },
+                "system": {
+                    "battery_pct": None,
+                    "cpu_temp_c": read_cpu_temp(),
+                    "fps": round(fps, 1) if camera_connected else 0.0,
+                },
+                "obstacles": obs_payload,
+            })
+
+            # Hiển thị cửa sổ Desktop và nhận phím bấm mô phỏng (chỉ bật phím giả lập khi --source demo)
             if debug_view:
                 cv2.imshow("PBL6 - Smart Blind Navigation", vis_frame)
                 key = cv2.waitKey(1) & 0xFF
                 if key in [ord('q'), 27]:
                     break
-                elif key == ord('1'):
+                elif is_demo and key == ord('1'):
                     sensor.set_simulated_distance(3.0, manual=True)
-                elif key == ord('2'):
+                elif is_demo and key == ord('2'):
                     sensor.set_simulated_distance(2.0, manual=True)
-                elif key == ord('3'):
+                elif is_demo and key == ord('3'):
                     sensor.set_simulated_distance(0.5, manual=True)
-                elif key == ord('4'):
+                elif is_demo and key == ord('4'):
                     sensor.set_simulated_distance(0.7, manual=True)
             else:
                 time.sleep(max(0.001, 0.033 - t_elapsed))
@@ -287,14 +448,18 @@ def main():
         pass
     finally:
         print("\n[INFO] Đang đóng hệ thống an toàn...")
+        audio_bridge.stop()
         audio.stop()
         sensor.stop()
         if fresh_cap:
             fresh_cap.release()
         elif cap and cap.isOpened():
             cap.release()
-        if HAS_CV2:
-            cv2.destroyAllWindows()
+        if debug_view and HAS_CV2:
+            try:
+                cv2.destroyAllWindows()
+            except Exception:
+                pass
         print("[DONE] Đã giải phóng toàn bộ tài nguyên.")
 
 
