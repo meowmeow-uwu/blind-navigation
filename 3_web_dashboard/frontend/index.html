@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="vi">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width,initial-scale=1">
+	<title>BlindNav Care - Giám sát Người khiếm thị</title>
+	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+	<link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+	<header class="hdr">
+		<div class="brd">
+			<div class="lgo">BN</div>
+			<div>
+				<div class="ttl">BlindNav Care</div>
+				<div class="sub">Giám sát điều hướng người khiếm thị</div>
+			</div>
+		</div>
+		<nav class="nav">
+			<button class="tab act" data-tab="live" id="t_live">Trực tiếp &amp; Đàm thoại</button>
+			<button class="tab" data-tab="map" id="t_map">Bản đồ Thời gian thực</button>
+			<button class="tab" data-tab="cfg" id="t_cfg">Cấu hình &amp; Thông số</button>
+		</nav>
+		<div class="sts">
+			<span class="pil" id="b_con">Đang kết nối...</span>
+			<span class="met">Siêu âm: <strong id="h_us">--</strong></span>
+			<span class="met">Pin: <strong id="h_bat">--</strong></span>
+			<span class="met">CPU: <strong id="h_tmp">--</strong></span>
+		</div>
+	</header>
+	<div class="alr hid" id="b_emg">
+		<span id="t_emg">CẢNH BÁO KHẨN CẤP</span>
+		<button class="btn sm" id="b_qst">Nhấn nói ngay</button>
+	</div>
+	<main class="wrp">
+		<section class="pg act" id="p_live">
+			<div class="grd_l">
+				<div class="col_m">
+					<div class="crd">
+						<div class="c_hd">
+							<div class="c_tt">Camera Trực tuyến</div>
+							<div class="c_ac">
+								<span class="tag" id="c_mdl">YOLO26n</span>
+								<span class="tag" id="c_fps">0 FPS</span>
+								<button class="btn sm" id="b_snp">Chụp ảnh</button>
+								<button class="btn sm" id="b_ful">Toàn màn hình</button>
+								<button class="btn sm" id="b_rec">Tải lại</button>
+							</div>
+						</div>
+						<div class="v_box" id="v_wrp">
+							<img id="v_cam" src="/api/video_feed" alt="Camera trực tuyến">
+							<div class="v_ov">
+								<span class="dot"></span>
+								<span id="v_mod">MÔ PHỎNG</span>
+							</div>
+							<div class="v_emg hid" id="v_alr">VẬT CẢN QUÁ GẦN</div>
+						</div>
+						<div class="scn_b" id="d_scn">
+							<span class="lbl">Kiểm thử nhanh:</span>
+							<button class="btn xs" data-scn="normal">Bình thường</button>
+							<button class="btn xs dng" data-scn="emergency">Vật cản gần 0.6m</button>
+							<button class="btn xs wrn" data-scn="invisible">Kính / Vô hình</button>
+							<button class="btn xs wrn" data-scn="geofence">Ra khỏi vùng an toàn</button>
+						</div>
+					</div>
+					<div class="crd ptt_c">
+						<div class="c_hd">
+							<div class="c_tt">Nói chuyện qua Loa thiết bị</div>
+							<span class="tag" id="p_st">Sẵn sàng</span>
+						</div>
+						<div class="ptt_r">
+							<button class="ptt_b" id="btn_ptt" type="button">
+								<span class="ptt_i">MIC</span>
+								<span class="ptt_t" id="p_lbl">NHẤN &amp; GIỮ ĐỂ NÓI</span>
+								<span class="ptt_h">Hoặc giữ phím Space</span>
+							</button>
+							<div class="ptt_m">
+								<div class="vu" id="v_vu"></div>
+								<div class="ptt_k">
+									<span>Thời lượng: <strong id="p_dur">00:00.0</strong></span>
+									<button class="btn sm" id="b_ply" disabled>Nghe lại đoạn vừa nói</button>
+								</div>
+								<div class="tts_r">
+									<input type="text" id="i_tts" placeholder="Gõ lời nhắc gửi ra loa (VD: Dừng lại có xe máy)">
+									<button class="btn pri" id="b_tts">Gửi giọng nói</button>
+								</div>
+								<div class="chp_r">
+									<button class="chp" data-tts="Dừng lại chờ một chút">Dừng lại chờ chút</button>
+									<button class="chp" data-tts="Phía trước có bậc thang">Có bậc thang</button>
+									<button class="chp" data-tts="Đi chậm lại, nép sang phải">Nép sang phải</button>
+									<button class="chp" data-tts="Đang qua đường, chú ý an toàn">Chú ý qua đường</button>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="col_s">
+					<div class="crd">
+						<div class="c_hd">
+							<div class="c_tt">Cảm biến Siêu âm &amp; Thiết bị</div>
+							<span class="tag" id="u_tag">An toàn</span>
+						</div>
+						<div class="us_v">
+							<div>
+								<div class="big" id="u_dst">-- m</div>
+								<div class="mut">Chùm sóng <span id="u_ang">30°</span> | Ngưỡng khẩn: <span id="u_thr">1.0m</span></div>
+							</div>
+						</div>
+						<div class="bar_w">
+							<div class="bar_t">
+								<div class="bar_f" id="u_bar"></div>
+								<div class="bar_m" id="u_mrk"></div>
+							</div>
+							<div class="bar_l"><span>0m</span><span>1m</span><span>2m</span><span>3m</span><span>4m</span></div>
+						</div>
+						<div class="kpi_g">
+							<div class="kpi"><span>Pin</span><strong id="k_bat">--%</strong></div>
+							<div class="kpi"><span>Nhiệt độ Pi</span><strong id="k_tmp">--°C</strong></div>
+							<div class="kpi"><span>Tốc độ đi</span><strong id="k_spd">-- m/s</strong></div>
+							<div class="kpi"><span>Vệ tinh GPS</span><strong id="k_sat">--</strong></div>
+						</div>
+					</div>
+					<div class="crd">
+						<div class="c_hd">
+							<div class="c_tt">Vật cản đang nhận diện</div>
+							<span class="tag" id="o_cnt">0</span>
+						</div>
+						<div class="obs_l" id="l_obs"></div>
+					</div>
+					<div class="crd">
+						<div class="c_hd">
+							<div class="c_tt">Radar &amp; Vị trí hiện tại</div>
+							<button class="btn sm" id="b_gom">Mở Bản đồ Lớn</button>
+						</div>
+						<div class="rad_w">
+							<canvas id="c_min" width="320" height="210"></canvas>
+						</div>
+						<div class="mut" id="m_crd">GPS: --, --</div>
+					</div>
+					<div class="crd">
+						<div class="c_hd">
+							<div class="c_tt">Nhật ký Cảnh báo &amp; Thoại</div>
+							<button class="btn sm" id="b_clr">Xóa</button>
+						</div>
+						<div class="log_l" id="l_log"></div>
+					</div>
+				</div>
+			</div>
+		</section>
+		<section class="pg" id="p_map">
+			<div class="grd_m">
+				<div class="crd map_c">
+					<div class="c_hd">
+						<div class="c_tt">Bản đồ thời gian thực (Tâm là người khiếm thị)</div>
+						<div class="c_ac">
+							<button class="btn sm pri" id="b_loc">Khóa tâm: BẬT</button>
+							<button class="btn sm" id="b_mmd">Chế độ: Đường phố</button>
+							<button class="btn sm" id="b_hom">Đặt làm Tâm An toàn</button>
+						</div>
+					</div>
+					<div class="m_box" id="m_box">
+						<div id="m_osm"></div>
+						<canvas id="m_cvs" class="hid"></canvas>
+						<div class="m_ov">
+							<span id="m_gfs">Trong vùng an toàn</span>
+						</div>
+					</div>
+				</div>
+				<div class="col_s">
+					<div class="crd">
+						<div class="c_hd">
+							<div class="c_tt">Tọa độ &amp; Di chuyển GPS</div>
+							<span class="tag" id="g_tag">GPS OK</span>
+						</div>
+						<div class="kpi_g">
+							<div class="kpi"><span>Vĩ độ</span><strong id="g_lat">--</strong></div>
+							<div class="kpi"><span>Kinh độ</span><strong id="g_lng">--</strong></div>
+							<div class="kpi"><span>Hướng nhìn</span><strong id="g_hdg">--°</strong></div>
+							<div class="kpi"><span>Tốc độ</span><strong id="g_spd">-- km/h</strong></div>
+							<div class="kpi"><span>Cách tâm an toàn</span><strong id="g_hom">-- m</strong></div>
+							<div class="kpi"><span>Vệ tinh / HDOP</span><strong id="g_sat">--</strong></div>
+						</div>
+					</div>
+					<div class="crd">
+						<div class="c_hd">
+							<div class="c_tt">Đàm thoại nhanh trên Bản đồ</div>
+							<span class="tag" id="p_st2">Sẵn sàng</span>
+						</div>
+						<button class="ptt_b sm_p" id="btn_pt2" type="button">
+							<span class="ptt_i">MIC</span>
+							<span class="ptt_t">NHẤN &amp; GIỮ ĐỂ NÓI</span>
+						</button>
+					</div>
+					<div class="crd">
+						<div class="c_hd">
+							<div class="c_tt">Vật cản quanh người dùng</div>
+							<span class="tag" id="o_cnt2">0</span>
+						</div>
+						<div class="obs_l" id="l_obs2"></div>
+					</div>
+				</div>
+			</div>
+		</section>
+		<section class="pg" id="p_cfg">
+			<div class="cfg_top">
+				<div>
+					<h2 class="h2">Cấu hình &amp; Thông số Hệ thống</h2>
+					<p class="mut">Chỉnh ngưỡng cảnh báo, thông số AI, cảm biến siêu âm, loa và vùng an toàn GPS.</p>
+				</div>
+				<div class="c_ac">
+					<button class="btn" id="b_tst">Kiểm tra kết nối Pi</button>
+					<button class="btn" id="b_rst">Khôi phục mặc định</button>
+					<button class="btn pri" id="b_sav">Lưu &amp; Áp dụng</button>
+				</div>
+			</div>
+			<div class="tst hid" id="f_msg"></div>
+			<form class="cfg_g" id="f_cfg">
+				<div class="crd">
+					<div class="c_tt mb">1. Camera &amp; Mô hình AI</div>
+					<div class="frm_g">
+						<label>Mô hình YOLO<select id="c_mnm"><option value="yolov26n">YOLO26n</option><option value="yolov12n">YOLO12n</option><option value="yolov9t">YOLOv9t</option><option value="yolov8n">YOLOv8n</option></select></label>
+						<label>Runtime Backend<select id="c_mbk"><option value="onnx">ONNX Runtime</option><option value="ncnn">NCNN (Pi 4 NEON)</option></select></label>
+						<label>Độ chính xác<select id="c_mpr"><option value="int8">INT8 PTQ</option><option value="fp32">FP32</option></select></label>
+						<label>Kích thước ảnh<select id="c_msz"><option value="320">320 x 320</option><option value="640">640 x 640</option></select></label>
+						<label>Ngưỡng Confidence<input type="number" step="0.01" min="0.01" max="1" id="c_cnf"></label>
+						<label>Ngưỡng NMS IoU<input type="number" step="0.01" min="0.05" max="1" id="c_iou"></label>
+						<label>Chiều rộng Camera<input type="number" id="c_fw"></label>
+						<label>Chiều cao Camera<input type="number" id="c_fh"></label>
+						<label>Độ cao gắn Camera (m)<input type="number" step="0.05" id="c_ch"></label>
+						<label>Góc nghiêng xuống (độ)<input type="number" step="0.5" id="c_tl"></label>
+					</div>
+				</div>
+				<div class="crd">
+					<div class="c_tt mb">2. Cảm biến Siêu âm &amp; Bộ lọc Kalman</div>
+					<div class="frm_g">
+						<label>Ngưỡng khẩn cấp (m)<input type="number" step="0.05" min="0.2" max="3.5" id="u_emg"></label>
+						<label>Góc chùm sóng (độ)<input type="number" step="1" min="5" max="90" id="u_bm"></label>
+						<label>Tần số đo (Hz)<input type="number" step="1" min="10" max="100" id="u_hz"></label>
+						<label>Cự ly tối thiểu (m)<input type="number" step="0.01" id="u_mn"></label>
+						<label>Cự ly tối đa (m)<input type="number" step="0.1" id="u_mx"></label>
+						<label>Nhiễu quá trình Q<input type="number" step="0.05" id="k_q"></label>
+						<label>Phương sai Siêu âm R_us<input type="number" step="0.0005" id="k_ru"></label>
+						<label>Phương sai Camera R_cam<input type="number" step="0.01" id="k_rc"></label>
+						<label>Ngưỡng Mahalanobis Gating<input type="number" step="0.1" id="k_gt"></label>
+					</div>
+				</div>
+				<div class="crd">
+					<div class="c_hd mb">
+						<div class="c_tt">3. Trọng số Đánh giá Nguy cơ</div>
+						<span class="tag" id="w_sum">Tổng: 1.00</span>
+					</div>
+					<div class="frm_g">
+						<label>Trọng số Khoảng cách<input type="number" step="0.05" min="0" max="1" id="r_wd"></label>
+						<label>Trọng số Loại vật cản<input type="number" step="0.05" min="0" max="1" id="r_wc"></label>
+						<label>Trọng số Làn đường<input type="number" step="0.05" min="0" max="1" id="r_wh"></label>
+						<label>Trọng số TTC<input type="number" step="0.05" min="0" max="1" id="r_wt"></label>
+						<label>Ngưỡng TTC nguy hiểm (s)<input type="number" step="0.1" id="r_tc"></label>
+					</div>
+				</div>
+				<div class="crd">
+					<div class="c_tt mb">4. Loa, Âm thanh &amp; Đàm thoại</div>
+					<div class="frm_g">
+						<label>Ngôn ngữ giọng đọc<select id="a_lg"><option value="vi">Tiếng Việt (vi)</option><option value="en">English (en)</option></select></label>
+						<label>Tốc độ đọc TTS<input type="number" step="10" min="100" max="300" id="a_rt"></label>
+						<label>Âm lượng loa (%)<input type="number" step="1" min="0" max="100" id="a_vl"></label>
+						<label>Giãn cách bíp khẩn cấp (s)<input type="number" step="0.1" min="0.1" id="a_ec"></label>
+						<label>Giãn cách câu dẫn hướng (s)<input type="number" step="0.1" min="0.5" id="a_tc"></label>
+						<label class="chk"><input type="checkbox" id="a_bp"> Bật tiếng bíp khẩn cấp</label>
+						<label class="chk"><input type="checkbox" id="a_pr"> Cho phép giọng người thân ngắt TTS</label>
+					</div>
+				</div>
+				<div class="crd span2">
+					<div class="c_tt mb">5. GPS, Vùng An toàn &amp; Kết nối Thiết bị Biên</div>
+					<div class="frm_g cols3">
+						<label>Tâm an toàn Vĩ độ<input type="number" step="0.000001" id="g_hlat"></label>
+						<label>Tâm an toàn Kinh độ<input type="number" step="0.000001" id="g_hlng"></label>
+						<label>Bán kính an toàn (m)<input type="number" step="10" min="20" id="g_rad"></label>
+						<label>Tên thiết bị<input type="text" id="s_nm"></label>
+						<label>Nguồn dữ liệu<select id="s_md"><option value="simulation">Mô phỏng trực tiếp</option><option value="edge_live">Thiết bị Raspberry Pi thật</option></select></label>
+						<label>IP / Host Raspberry Pi<input type="text" id="e_hst"></label>
+						<label>Port HTTP Edge<input type="number" id="e_prt"></label>
+						<label>MQTT Broker Host<input type="text" id="e_mhs"></label>
+						<label>MQTT Port<input type="number" id="e_mpr"></label>
+						<label class="chk"><input type="checkbox" id="e_mq"> Bật kết nối MQTT Broker</label>
+						<label class="chk"><input type="checkbox" id="s_sy"> Đồng bộ xuống 2_edge_device/configs</label>
+					</div>
+				</div>
+			</form>
+		</section>
+	</main>
+	<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+	<script src="/static/app.js"></script>
+</body>
+</html>
